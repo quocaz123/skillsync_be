@@ -115,7 +115,7 @@ public class AuthService {
                     .orElseGet(() -> {
                         User newUser = new User();
                         newUser.setEmail(email);
-                        newUser.setPassword(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+                        newUser.setPassword("");
                         newUser.setRole(Role.USER);
                         log.info("New user created from Google login: {}", email);
                         return userRepository.save(newUser);
