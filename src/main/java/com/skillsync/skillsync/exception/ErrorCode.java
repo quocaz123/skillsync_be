@@ -14,7 +14,9 @@ public enum ErrorCode {
     FORBIDDEN(403, "Access denied", HttpStatus.FORBIDDEN),
     NOT_FOUND(404, "Resource not found", HttpStatus.NOT_FOUND),
     INTERNAL_SERVER_ERROR(500, "Internal server error", HttpStatus.INTERNAL_SERVER_ERROR),
-    INVALID_REQUEST(400, "Invalid request parameters", HttpStatus.BAD_REQUEST);
+    INVALID_REQUEST(400, "Invalid request parameters", HttpStatus.BAD_REQUEST),
+    INVALID_GOOGLE_TOKEN(401, "Invalid Google token", HttpStatus.UNAUTHORIZED)
+    ;
 
     private final int code;
     private final String message;
