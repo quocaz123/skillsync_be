@@ -25,15 +25,24 @@ public class DataInitializer implements CommandLineRunner {
 
     private void seedUser(String email, String rawPassword, Role role) {
         if (userRepository.findByEmail(email).isEmpty()) {
+            String fullName = deriveFullNameFromEmail(email);
             User user = User.builder()
                     .email(email)
                     .password(passwordEncoder.encode(rawPassword))
                     .role(role)
+                    .fullName(fullName)
                     .build();
             userRepository.save(user);
             log.info("✅ Seeded {} user: {}", role.name(), email);
         } else {
             log.info("⏩ {} user already exists: {}", role.name(), email);
         }
+    }
+
+    private static String deriveFullNameFromEmail(String email) {
+        if (email == null || email.isBlank()) return "User";
+        String local = email.split("@")[0];
+        if (local.isBlank()) return "User";
+        return Character.toUpperCase(local.charAt(0)) + local.substring(1);
     }
 }

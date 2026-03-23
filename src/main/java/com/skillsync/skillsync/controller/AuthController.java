@@ -3,7 +3,7 @@ package com.skillsync.skillsync.controller;
 import com.skillsync.skillsync.constant.CookieNames;
 import com.skillsync.skillsync.dto.common.ApiResponse;
 import com.skillsync.skillsync.dto.request.auth.AuthenticationRequest;
-import com.skillsync.skillsync.dto.request.auth.GoggleLoginRequest;
+import com.skillsync.skillsync.dto.request.auth.GoogleCodeExchangeRequest;
 import com.skillsync.skillsync.dto.request.auth.LoginRequest;
 import com.skillsync.skillsync.dto.response.auth.AuthenticationResponse;
 import com.skillsync.skillsync.dto.response.auth.UserAuthResponse;
@@ -49,10 +49,11 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(userAuthResponse));
     }
 
-    @PostMapping("/google")
-    public ResponseEntity<ApiResponse<UserAuthResponse>> googleLogin(@RequestBody GoggleLoginRequest request,
+
+    @PostMapping("/google/exchange")
+    public ResponseEntity<ApiResponse<UserAuthResponse>> googleExchangeCode(@RequestBody GoogleCodeExchangeRequest request,
             HttpServletResponse response) {
-        AuthenticationResponse auth = authService.googleLogin(request.getIdToken());
+        AuthenticationResponse auth = authService.googleExchangeCode(request.getCode(), request.getRedirectUri());
         cookieService.setAuthCookies(response, auth);
 
         UserAuthResponse userAuthResponse = mapToUserAuthResponse(auth);

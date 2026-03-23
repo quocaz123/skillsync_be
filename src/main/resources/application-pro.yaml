@@ -24,7 +24,9 @@ spring:
         "[jdbc.lob.non_contextual_creation]": true
 
 jwt:
-  secret: ${JWT_SECRET}
+  # Nếu không set JWT_SECRET thì dùng chuỗi rỗng để server không crash khi dev.
+  # JwtService sẽ tự tạo secret tạm thời (không dùng cho production).
+  secret: ${JWT_SECRET:}
 
 app:
   cookie:

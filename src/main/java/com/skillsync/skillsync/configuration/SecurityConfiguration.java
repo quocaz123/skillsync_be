@@ -26,7 +26,7 @@ public class SecurityConfiguration {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/register", "/auth/login", "/auth/google", "/auth/refresh").permitAll()
+                        .requestMatchers("/auth/register", "/auth/login", "/auth/google", "/auth/google/exchange", "/auth/refresh").permitAll()
                         .requestMatchers("/auth/logout").permitAll()
                         .requestMatchers("/auth/**").authenticated()
                         // Admin only
@@ -50,7 +50,9 @@ public class SecurityConfiguration {
                                 "http://127.0.0.1:5173",
                                 "https://skillsync-fe.pages.dev")
                         .allowCredentials(true)
-                        .allowedMethods("*");
+                                .allowedMethods("*")
+                                .allowedHeaders("*")
+                                .maxAge(3600);
             }
         };
     }
