@@ -15,7 +15,8 @@ public class CookieService {
     private final CookieProperties cookieProperties;
     
     public void setAuthCookies(HttpServletResponse response, AuthenticationResponse auth) {
-        response.addCookie(buildCookie(CookieNames.ACCESS_TOKEN, auth.getAccessToken(), 60 * 15));
+        // Match JwtService access token expiry (1 hour)
+        response.addCookie(buildCookie(CookieNames.ACCESS_TOKEN, auth.getAccessToken(), 60 * 60));
         response.addCookie(buildCookie(CookieNames.REFRESH_TOKEN, auth.getRefreshToken(), 60 * 60 * 24 * 7));
     }
 
