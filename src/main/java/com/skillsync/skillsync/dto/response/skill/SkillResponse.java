@@ -1,4 +1,4 @@
-package com.skillsync.skillsync.dto.response;
+package com.skillsync.skillsync.dto.response.skill;
 
 import com.skillsync.skillsync.enums.SkillCategory;
 import lombok.*;

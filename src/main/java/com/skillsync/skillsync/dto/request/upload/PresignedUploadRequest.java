@@ -1,4 +1,4 @@
-package com.skillsync.skillsync.dto.request;
+package com.skillsync.skillsync.dto.request.upload;
 
 import com.skillsync.skillsync.enums.UploadType;
 import lombok.*;

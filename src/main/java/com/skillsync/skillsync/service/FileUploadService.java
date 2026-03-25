@@ -1,7 +1,7 @@
 package com.skillsync.skillsync.service;
 
-import com.skillsync.skillsync.dto.request.PresignedUploadRequest;
-import com.skillsync.skillsync.dto.response.PresignedUploadResponse;
+import com.skillsync.skillsync.dto.request.upload.PresignedUploadRequest;
+import com.skillsync.skillsync.dto.response.upload.PresignedUploadResponse;
 import com.skillsync.skillsync.enums.UploadType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,7 +10,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
-import software.amazon.awssdk.services.s3.presigner.model.PresignPutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 import java.net.URL;
 import java.time.Duration;
@@ -45,13 +45,13 @@ public class FileUploadService {
                 .contentType(request.getContentType())
                 .build();
 
-        PresignPutObjectRequest presignRequest = PresignPutObjectRequest.builder()
+        PutObjectPresignRequest presignRequest = PutObjectPresignRequest.builder()
                 .signatureDuration(Duration.ofSeconds(EXPIRES_IN_SECONDS))
                 .putObjectRequest(putObjectRequest)
                 .build();
 
         URL uploadUrl = s3Presigner.presignPutObject(presignRequest).url();
-        String fileUrl = buildFileUrl(fileKey);
+        String fileUrl = buildPublicUrl(fileKey);
 
         return PresignedUploadResponse.builder()
                 .uploadUrl(uploadUrl.toString())
@@ -69,8 +69,6 @@ public class FileUploadService {
                 .key(fileKey)
                 .build());
     }
-
-    // ─── Private helpers ────────────────────────────────────────────────────
 
     private void validateRequest(PresignedUploadRequest request) {
         if (request == null) throw new IllegalArgumentException("Request không được null");
@@ -115,7 +113,7 @@ public class FileUploadService {
                 .replaceAll("[^a-zA-Z0-9._-]", "");
     }
 
-    private String buildFileUrl(String fileKey) {
+    public String buildPublicUrl(String fileKey) {
         return publicBaseUrl.endsWith("/") ? publicBaseUrl + fileKey : publicBaseUrl + "/" + fileKey;
     }
 }

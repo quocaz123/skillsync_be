@@ -1,7 +1,7 @@
 package com.skillsync.skillsync.service;
 
-import com.skillsync.skillsync.dto.request.CreateTeachingSkillRequest;
-import com.skillsync.skillsync.dto.response.TeachingSkillResponse;
+import com.skillsync.skillsync.dto.request.skill.CreateTeachingSkillRequest;
+import com.skillsync.skillsync.dto.response.skill.TeachingSkillResponse;
 import com.skillsync.skillsync.entity.Skill;
 import com.skillsync.skillsync.entity.User;
 import com.skillsync.skillsync.entity.UserTeachingSkill;

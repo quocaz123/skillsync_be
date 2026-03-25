@@ -1,8 +1,13 @@
 package com.skillsync.skillsync.enums;
 
 public enum EvidenceType {
-    VIDEO,
     CERTIFICATE,
+    VIDEO_INTRO,
+    PORTFOLIO,
     LINKEDIN,
-    PORTFOLIO
+    GITHUB,
+    BEHANCE,
+    WORK_PROOF,
+    TEACHING_CERTIFICATE,
+    OTHER
 }

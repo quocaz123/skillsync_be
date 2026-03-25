@@ -1,6 +1,6 @@
 package com.skillsync.skillsync.mapper;
 
-import com.skillsync.skillsync.dto.response.UserResponse;
+import com.skillsync.skillsync.dto.response.user.UserResponse;
 import com.skillsync.skillsync.entity.User;
 import org.mapstruct.Mapper;
 

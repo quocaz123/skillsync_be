@@ -1,7 +1,7 @@
 package com.skillsync.skillsync.controller;
 
-import com.skillsync.skillsync.dto.request.UpdateAvatarRequest;
-import com.skillsync.skillsync.dto.response.UserResponse;
+import com.skillsync.skillsync.dto.request.upload.UpdateAvatarRequest;
+import com.skillsync.skillsync.dto.response.user.UserResponse;
 import com.skillsync.skillsync.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;

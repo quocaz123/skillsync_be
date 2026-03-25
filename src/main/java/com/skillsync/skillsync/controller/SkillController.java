@@ -1,6 +1,6 @@
 package com.skillsync.skillsync.controller;
 
-import com.skillsync.skillsync.dto.response.SkillResponse;
+import com.skillsync.skillsync.dto.response.skill.SkillResponse;
 import com.skillsync.skillsync.enums.SkillCategory;
 import com.skillsync.skillsync.service.SkillService;
 import lombok.RequiredArgsConstructor;

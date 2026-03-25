@@ -1,7 +1,7 @@
 package com.skillsync.skillsync.mapper;
 
-import com.skillsync.skillsync.dto.request.TeachingSkillEvidenceRequest;
-import com.skillsync.skillsync.dto.response.TeachingSkillEvidenceResponse;
+import com.skillsync.skillsync.dto.request.skill.TeachingSkillEvidenceRequest;
+import com.skillsync.skillsync.dto.response.user.TeachingSkillEvidenceResponse;
 import com.skillsync.skillsync.entity.TeachingSkillEvidence;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;

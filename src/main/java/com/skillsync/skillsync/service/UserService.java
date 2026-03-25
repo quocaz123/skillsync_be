@@ -1,7 +1,7 @@
 package com.skillsync.skillsync.service;
 
-import com.skillsync.skillsync.dto.request.UpdateAvatarRequest;
-import com.skillsync.skillsync.dto.response.UserResponse;
+import com.skillsync.skillsync.dto.request.upload.UpdateAvatarRequest;
+import com.skillsync.skillsync.dto.response.user.UserResponse;
 import com.skillsync.skillsync.entity.User;
 import com.skillsync.skillsync.mapper.UserResponseMapper;
 import com.skillsync.skillsync.repository.UserRepository;
@@ -28,10 +28,8 @@ public class UserService {
     }
 
     public UserResponse updateAvatar(UpdateAvatarRequest request) {
-        if (request.getAvatarUrl() == null || request.getAvatarUrl().isBlank())
-            throw new IllegalArgumentException("avatarUrl không được để trống");
-        if (request.getAvatarKey() == null || request.getAvatarKey().isBlank())
-            throw new IllegalArgumentException("avatarKey không được để trống");
+        if (request.getFileKey() == null || request.getFileKey().isBlank())
+            throw new IllegalArgumentException("fileKey không được để trống");
 
         User user = getCurrentUser();
 
@@ -40,8 +38,9 @@ public class UserService {
             fileUploadService.deleteFileByKey(user.getAvatarKey());
         }
 
-        user.setAvatarUrl(request.getAvatarUrl());
-        user.setAvatarKey(request.getAvatarKey());
+        String fileKey = request.getFileKey();
+        user.setAvatarKey(fileKey);
+        user.setAvatarUrl(fileUploadService.buildPublicUrl(fileKey)); // BE tự build URL
 
         return userResponseMapper.toResponse(userRepository.save(user));
     }

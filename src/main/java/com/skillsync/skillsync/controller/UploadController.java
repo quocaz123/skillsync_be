@@ -1,7 +1,7 @@
 package com.skillsync.skillsync.controller;
 
-import com.skillsync.skillsync.dto.request.PresignedUploadRequest;
-import com.skillsync.skillsync.dto.response.PresignedUploadResponse;
+import com.skillsync.skillsync.dto.request.upload.PresignedUploadRequest;
+import com.skillsync.skillsync.dto.response.upload.PresignedUploadResponse;
 import com.skillsync.skillsync.service.FileUploadService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;

@@ -1,4 +1,4 @@
-package com.skillsync.skillsync.dto.response;
+package com.skillsync.skillsync.dto.response.upload;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;

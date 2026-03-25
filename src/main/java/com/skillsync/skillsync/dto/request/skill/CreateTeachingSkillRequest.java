@@ -1,4 +1,4 @@
-package com.skillsync.skillsync.dto.request;
+package com.skillsync.skillsync.dto.request.skill;
 
 import com.skillsync.skillsync.enums.SkillLevel;
 import lombok.*;

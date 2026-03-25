@@ -1,7 +1,7 @@
 package com.skillsync.skillsync.controller;
 
-import com.skillsync.skillsync.dto.request.CreateTeachingSkillRequest;
-import com.skillsync.skillsync.dto.response.TeachingSkillResponse;
+import com.skillsync.skillsync.dto.request.skill.CreateTeachingSkillRequest;
+import com.skillsync.skillsync.dto.response.skill.TeachingSkillResponse;
 import com.skillsync.skillsync.service.UserTeachingSkillService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

@@ -1,4 +1,4 @@
-package com.skillsync.skillsync.dto.response;
+package com.skillsync.skillsync.dto.response.user;
 
 import com.skillsync.skillsync.enums.EvidenceType;
 import lombok.*;
