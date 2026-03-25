@@ -213,6 +213,7 @@ public class AuthService {
                 .userId(user.getId() != null ? user.getId().toString() : null)
                 .email(user.getEmail())
                 .role(user.getRole().name())
+                .creditsBalance(user.getCreditsBalance())
                 .build();
     }
 }
