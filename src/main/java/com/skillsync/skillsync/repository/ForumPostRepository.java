@@ -24,4 +24,7 @@ public interface ForumPostRepository extends JpaRepository<ForumPost, UUID> {
     List<ForumPost> findTop10ByOrderByCreatedAtDesc();
 
     Page<ForumPost> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
+    Page<ForumPost> findByCategoryIdAndTitleContainingIgnoreCaseOrCategoryIdAndContentContainingIgnoreCaseOrderByCreatedAtDesc(
+            UUID categoryId1, String title, UUID categoryId2, String content, Pageable pageable);
 }

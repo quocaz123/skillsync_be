@@ -40,14 +40,19 @@ public class ForumPostService {
     public Page<ForumPostResponse> getAllPosts(UUID categoryId, String searchKeyword, Pageable pageable) {
         Page<ForumPost> posts;
 
-        if (categoryId != null && searchKeyword != null) {
-            posts = postRepository.findByCategoryIdOrderByCreatedAtDesc(categoryId, pageable);
+        if (categoryId != null && searchKeyword != null && !searchKeyword.isEmpty()) {
+            // Both category and search keyword provided - filter by category AND search in title/content
+            posts = postRepository.findByCategoryIdAndTitleContainingIgnoreCaseOrCategoryIdAndContentContainingIgnoreCaseOrderByCreatedAtDesc(
+                    categoryId, searchKeyword, categoryId, searchKeyword, pageable);
         } else if (categoryId != null) {
+            // Only category filter
             posts = postRepository.findByCategoryIdOrderByCreatedAtDesc(categoryId, pageable);
         } else if (searchKeyword != null && !searchKeyword.isEmpty()) {
+            // Only search keyword
             posts = postRepository.findByTitleContainingIgnoreCaseOrContentContainingIgnoreCaseOrderByCreatedAtDesc(
                     searchKeyword, searchKeyword, pageable);
         } else {
+            // No filters - get all posts
             posts = postRepository.findAllByOrderByCreatedAtDesc(pageable);
         }
 
@@ -184,18 +189,29 @@ public class ForumPostService {
             saved = saveRepository.existsByPostIdAndUserId(post.getId(), currentUser.getId());
         }
 
+        // Validate required relationships
+        if (post.getAuthor() == null) {
+            throw new IllegalStateException("Post author is null for post: " + post.getId());
+        }
+        if (post.getCategory() == null) {
+            throw new IllegalStateException("Post category is null for post: " + post.getId());
+        }
+
+        User author = post.getAuthor();
+        ForumCategory category = post.getCategory();
+
         List<String> tags = post.getTags() != null && !post.getTags().isEmpty()
                 ? List.of(post.getTags().split(","))
                 : List.of();
 
         return ForumPostResponse.builder()
                 .id(post.getId())
-                .authorId(post.getAuthor().getId())
-                .authorName(post.getAuthor().getFullName())
-                .authorRole(post.getAuthor().getRole() != null ? post.getAuthor().getRole().name() : "USER")
-                .authorAvatar(post.getAuthor().getAvatarUrl())
-                .categoryId(post.getCategory().getId())
-                .categoryName(post.getCategory().getName())
+                .authorId(author.getId())
+                .authorName(author.getFullName())
+                .authorRole(author.getRole() != null ? author.getRole().name() : "USER")
+                .authorAvatar(author.getAvatarUrl())
+                .categoryId(category.getId())
+                .categoryName(category.getName())
                 .title(post.getTitle())
                 .content(post.getContent())
                 .postType(post.getPostType())

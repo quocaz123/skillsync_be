@@ -120,16 +120,21 @@ public class ForumCommentService {
      * Convert entity to response with nested replies
      */
     private CommentResponse toResponseWithReplies(ForumComment comment) {
+        if (comment.getAuthor() == null) {
+            throw new IllegalStateException("Comment author is null for comment: " + comment.getId());
+        }
+
+        User author = comment.getAuthor();
         List<CommentResponse> replies = getCommentReplies(comment.getId());
 
         return CommentResponse.builder()
                 .id(comment.getId())
                 .postId(comment.getPost().getId())
                 .parentCommentId(comment.getParentComment() != null ? comment.getParentComment().getId() : null)
-                .authorId(comment.getAuthor().getId())
-                .authorName(comment.getAuthor().getFullName())
-                .authorRole(comment.getAuthor().getRole() != null ? comment.getAuthor().getRole().name() : "USER")
-                .authorAvatar(comment.getAuthor().getAvatarUrl())
+                .authorId(author.getId())
+                .authorName(author.getFullName())
+                .authorRole(author.getRole() != null ? author.getRole().name() : "USER")
+                .authorAvatar(author.getAvatarUrl())
                 .content(comment.getContent())
                 .replies(replies)
                 .createdAt(comment.getCreatedAt())
@@ -141,14 +146,20 @@ public class ForumCommentService {
      * Convert entity to response (without nested replies)
      */
     private CommentResponse toResponse(ForumComment comment) {
+        if (comment.getAuthor() == null) {
+            throw new IllegalStateException("Comment author is null for comment: " + comment.getId());
+        }
+
+        User author = comment.getAuthor();
+
         return CommentResponse.builder()
                 .id(comment.getId())
                 .postId(comment.getPost().getId())
                 .parentCommentId(comment.getParentComment() != null ? comment.getParentComment().getId() : null)
-                .authorId(comment.getAuthor().getId())
-                .authorName(comment.getAuthor().getFullName())
-                .authorRole(comment.getAuthor().getRole() != null ? comment.getAuthor().getRole().name() : "USER")
-                .authorAvatar(comment.getAuthor().getAvatarUrl())
+                .authorId(author.getId())
+                .authorName(author.getFullName())
+                .authorRole(author.getRole() != null ? author.getRole().name() : "USER")
+                .authorAvatar(author.getAvatarUrl())
                 .content(comment.getContent())
                 .createdAt(comment.getCreatedAt())
                 .updatedAt(comment.getUpdatedAt())

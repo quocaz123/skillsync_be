@@ -1,6 +1,7 @@
 package com.skillsync.skillsync.service;
 
 import com.skillsync.skillsync.dto.response.forum.ForumPostResponse;
+import com.skillsync.skillsync.entity.ForumCategory;
 import com.skillsync.skillsync.entity.ForumPost;
 import com.skillsync.skillsync.entity.PostSave;
 import com.skillsync.skillsync.entity.User;
@@ -22,6 +23,7 @@ public class PostSaveService {
     private final PostSaveRepository saveRepository;
     private final ForumPostRepository postRepository;
     private final PostVoteRepository voteRepository;
+    private final ForumCommentService commentService;
     private final UserService userService;
 
     /**
@@ -99,8 +101,21 @@ public class PostSaveService {
      * Convert ForumPost entity to response DTO
      */
     private ForumPostResponse toPostResponse(ForumPost post, User currentUser) {
+        // Validate required relationships
+        if (post.getAuthor() == null) {
+            throw new IllegalStateException("Post author is null for post: " + post.getId());
+        }
+        if (post.getCategory() == null) {
+            throw new IllegalStateException("Post category is null for post: " + post.getId());
+        }
+
+        User author = post.getAuthor();
+        ForumCategory category = post.getCategory();
+
         Long upvotes = voteRepository.countByPostIdAndVoteType(post.getId(), VoteType.UPVOTE);
         Long downvotes = voteRepository.countByPostIdAndVoteType(post.getId(), VoteType.DOWNVOTE);
+        Long commentCount = commentService.getCommentCount(post.getId());
+        Long saveCount = saveRepository.countByPostId(post.getId());
 
         Boolean liked = voteRepository.findByPostIdAndUserId(post.getId(), currentUser.getId())
                 .map(v -> v.getVoteType() == VoteType.UPVOTE)
@@ -113,20 +128,20 @@ public class PostSaveService {
 
         return ForumPostResponse.builder()
                 .id(post.getId())
-                .authorId(post.getAuthor().getId())
-                .authorName(post.getAuthor().getFullName())
-                .authorRole(post.getAuthor().getRole() != null ? post.getAuthor().getRole().name() : "USER")
-                .authorAvatar(post.getAuthor().getAvatarUrl())
-                .categoryId(post.getCategory().getId())
-                .categoryName(post.getCategory().getName())
+                .authorId(author.getId())
+                .authorName(author.getFullName())
+                .authorRole(author.getRole() != null ? author.getRole().name() : "USER")
+                .authorAvatar(author.getAvatarUrl())
+                .categoryId(category.getId())
+                .categoryName(category.getName())
                 .title(post.getTitle())
                 .content(post.getContent())
                 .postType(post.getPostType())
                 .tags(tags)
                 .upvotes(upvotes)
                 .downvotes(downvotes)
-                .commentCount(0L) // Not needed for saved posts list
-                .saveCount(saveRepository.countByPostId(post.getId()))
+                .commentCount(commentCount)
+                .saveCount(saveCount)
                 .solved(post.getSolved())
                 .liked(liked)
                 .saved(saved)

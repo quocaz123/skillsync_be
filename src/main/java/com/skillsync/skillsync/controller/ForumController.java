@@ -16,10 +16,12 @@ import com.skillsync.skillsync.service.ForumCommentService;
 import com.skillsync.skillsync.service.ForumPostService;
 import com.skillsync.skillsync.service.PostSaveService;
 import com.skillsync.skillsync.service.PostVoteService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -62,7 +64,8 @@ public class ForumController {
      */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ForumPostResponse createPost(@RequestBody CreateForumPostRequest request) {
+    @PreAuthorize("isAuthenticated()")
+    public ForumPostResponse createPost(@Valid @RequestBody CreateForumPostRequest request) {
         return postService.createPost(request);
     }
 
@@ -86,9 +89,10 @@ public class ForumController {
      * PUT /api/forum/{postId} - Update post (only author)
      */
     @PutMapping("/{postId}")
+    @PreAuthorize("isAuthenticated()")
     public ForumPostResponse updatePost(
             @PathVariable UUID postId,
-            @RequestBody UpdateForumPostRequest request) {
+            @Valid @RequestBody UpdateForumPostRequest request) {
         return postService.updatePost(postId, request);
     }
 
@@ -97,6 +101,7 @@ public class ForumController {
      */
     @DeleteMapping("/{postId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("isAuthenticated()")
     public void deletePost(@PathVariable UUID postId) {
         postService.deletePost(postId);
     }
@@ -126,7 +131,8 @@ public class ForumController {
      */
     @PostMapping("/categories")
     @ResponseStatus(HttpStatus.CREATED)
-    public ForumCategoryResponse createCategory(@RequestBody CreateCategoryRequest request) {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ForumCategoryResponse createCategory(@Valid @RequestBody CreateCategoryRequest request) {
         return categoryService.createCategory(request);
     }
 
@@ -137,9 +143,10 @@ public class ForumController {
      */
     @PostMapping("/{postId}/comments")
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("isAuthenticated()")
     public CommentResponse addComment(
             @PathVariable UUID postId,
-            @RequestBody CreateCommentRequest request) {
+            @Valid @RequestBody CreateCommentRequest request) {
         return commentService.addComment(postId, request);
     }
 
@@ -147,9 +154,10 @@ public class ForumController {
      * PUT /api/forum/comments/{commentId} - Update comment (only author)
      */
     @PutMapping("/comments/{commentId}")
+    @PreAuthorize("isAuthenticated()")
     public CommentResponse updateComment(
             @PathVariable UUID commentId,
-            @RequestBody UpdateCommentRequest request) {
+            @Valid @RequestBody UpdateCommentRequest request) {
         return commentService.updateComment(commentId, request);
     }
 
@@ -158,6 +166,7 @@ public class ForumController {
      */
     @DeleteMapping("/comments/{commentId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("isAuthenticated()")
     public void deleteComment(@PathVariable UUID commentId) {
         commentService.deleteComment(commentId);
     }
@@ -168,9 +177,10 @@ public class ForumController {
      * POST /api/forum/{postId}/vote - Toggle vote on post (upvote/downvote)
      */
     @PostMapping("/{postId}/vote")
+    @PreAuthorize("isAuthenticated()")
     public VoteResponse toggleVote(
             @PathVariable UUID postId,
-            @RequestBody ToggleVoteRequest request) {
+            @Valid @RequestBody ToggleVoteRequest request) {
         return voteService.toggleVote(postId, request.getVoteType());
     }
 
@@ -190,6 +200,7 @@ public class ForumController {
      */
     @PostMapping("/{postId}/save")
     @ResponseStatus(HttpStatus.OK)
+    @PreAuthorize("isAuthenticated()")
     public void toggleSavePost(@PathVariable UUID postId) {
         saveService.toggleSave(postId);
     }
@@ -198,6 +209,7 @@ public class ForumController {
      * GET /api/forum/saved - Get current user's saved posts
      */
     @GetMapping("/saved")
+    @PreAuthorize("isAuthenticated()")
     public Page<ForumPostResponse> getSavedPosts(Pageable pageable) {
         return saveService.getUserSavedPosts(pageable);
     }
