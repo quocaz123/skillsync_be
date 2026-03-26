@@ -1,6 +1,5 @@
 package com.skillsync.skillsync.entity;
 
-import com.skillsync.skillsync.enums.PostType;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -11,42 +10,30 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "forum_posts")
+@Table(name = "forum_categories")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class ForumPost {
+public class ForumCategory {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "author_id")
-    User author;
+    @Column(nullable = false, unique = true, length = 100)
+    String name;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id", nullable = false)
-    ForumCategory category;
+    @Column(length = 500)
+    String description;
 
-    @Column(nullable = false)
-    String title;
-
-    @Column(nullable = false, columnDefinition = "TEXT")
-    String content;
+    @Column(length = 50)
+    String icon;
 
     @Builder.Default
-    @Enumerated(EnumType.STRING)
-    @Column(name = "post_type")
-    PostType postType = PostType.DISCUSSION;
-
-    @Builder.Default
-    @Column(name = "solved")
-    Boolean solved = false;
-
-    String tags;
+    @Column(name = "display_order")
+    Integer displayOrder = 0;
 
     @CreationTimestamp
     @Column(name = "created_at")
