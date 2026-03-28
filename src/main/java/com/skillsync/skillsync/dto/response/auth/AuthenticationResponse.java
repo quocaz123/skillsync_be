@@ -20,4 +20,5 @@ public class AuthenticationResponse {
     private String role;
     private String avatarUrl;
     private Boolean hasPassword;
+    private Integer creditsBalance;
 }

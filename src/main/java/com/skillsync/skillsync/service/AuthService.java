@@ -222,6 +222,7 @@ public class AuthService {
                 .role(user.getRole().name())
                 .avatarUrl(user.getAvatarUrl())
                 .hasPassword(user.getHasPassword() != null ? user.getHasPassword() : true)
+                .creditsBalance(user.getCreditsBalance())
                 .build();
     }
 }

@@ -52,7 +52,7 @@ public class User {
 
     @Builder.Default
     @Column(name = "credits_balance")
-    Integer creditsBalance = 0;
+    Integer creditsBalance = 50;
 
     @Builder.Default
     @Column(name = "trust_score")
