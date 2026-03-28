@@ -12,4 +12,5 @@ public class CreateSlotsRequest {
     // Batch: nhiều ngày + nhiều giờ → tạo tất cả tổ hợp
     private List<LocalDate> dates;
     private List<LocalTime> times;
+    private List<LocalTime> endTimes; // optional, map 1-1 với times
 }

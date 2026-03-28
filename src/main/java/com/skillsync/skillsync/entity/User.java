@@ -32,7 +32,7 @@ public class User {
     String password;
 
     @Column(name = "full_name", nullable = false, columnDefinition = "varchar(255) default 'User'")
-    String fullName = "User"; // Default fallback if needed
+    String fullName = "User";
 
     @Column(name = "avatar_url", length = 500)
     String avatarUrl;
@@ -60,6 +60,11 @@ public class User {
 
     @Column(columnDefinition = "TEXT")
     String bio;
+
+    // True if user has explicitly set a password (false for new Google-only users)
+    @Builder.Default
+    @Column(name = "has_password", nullable = false)
+    Boolean hasPassword = true;
 
     @CreationTimestamp
     @Column(name = "created_at")

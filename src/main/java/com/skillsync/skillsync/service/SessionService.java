@@ -117,26 +117,46 @@ public class SessionService {
         // Chỉ teacher hoặc learner của session mới được lấy token
         boolean isParticipant = session.getTeacher().getId().equals(user.getId())
                 || session.getLearner().getId().equals(user.getId());
-        if (!isParticipant) throw new AppException(ErrorCode.FORBIDDEN);
+        if (!isParticipant)
+            throw new AppException(ErrorCode.FORBIDDEN);
 
-        // Kiểm tra cửa sổ thời gian: -10 phút đến +2 tiếng so với giờ học
+        // Kiểm tra cửa sổ thời gian: -24 giờ đến +24 giờ so với giờ học (DEV MODE)
         LocalDateTime slotDateTime = LocalDateTime.of(
                 session.getSlot().getSlotDate(),
                 session.getSlot().getSlotTime());
         LocalDateTime now = LocalDateTime.now();
-        // Cửa sổ join: cho phép từ 60 phút trước → 24 giờ sau giờ học
-        // (Dành cho môi trường dev/test — production nên đặt lại -10min/+2h)
-        if (now.isBefore(slotDateTime.minusMinutes(60))) {
+        // Cửa sổ join (DEV MODE): cho phép từ 24 giờ trước → 24 giờ sau giờ học
+        if (now.isBefore(slotDateTime.minusHours(24))) {
             throw new AppException(ErrorCode.TOO_EARLY_TO_JOIN);
         }
         if (now.isAfter(slotDateTime.plusHours(24))) {
             throw new AppException(ErrorCode.SESSION_EXPIRED);
         }
 
+        // Tính toán thời gian hết hạn của token dựa trên thời gian kết thúc của slot
+        LocalDateTime slotEndDateTime;
+        if (session.getSlot().getSlotEndTime() != null) {
+            slotEndDateTime = LocalDateTime.of(
+                    session.getSlot().getSlotDate(),
+                    session.getSlot().getSlotEndTime());
+        } else {
+            // Fallback nếu không có slotEndTime, mặc định là 1 tiếng
+            slotEndDateTime = slotDateTime.plusHours(1);
+        }
+
+        // Thêm 5 phút buffer (du di) để không bị ngắt kết nối đúng 00:00
+        LocalDateTime tokenExpiryTime = slotEndDateTime.plusMinutes(5);
+        long secondsUntilExpiry = java.time.Duration.between(now, tokenExpiryTime).getSeconds();
+
+        // Cấp tối thiểu 30 phút trong trường hợp người dùng vào quá trễ so với giờ kết
+        // thúc (vẫn trong khoảng check DEV MODE)
+        int expireSeconds = secondsUntilExpiry > 0 ? (int) secondsUntilExpiry : 1800;
+
         String token = zegoTokenService.generateToken(
                 session.getVideoRoomId(),
                 user.getId().toString(),
-                user.getFullName() != null ? user.getFullName() : "User");
+                user.getFullName() != null ? user.getFullName() : "User",
+                expireSeconds);
 
         return ZegoTokenResponse.builder()
                 .token(token)
@@ -156,9 +176,11 @@ public class SessionService {
 
         boolean isParticipant = session.getTeacher().getId().equals(user.getId())
                 || session.getLearner().getId().equals(user.getId());
-        if (!isParticipant) throw new AppException(ErrorCode.FORBIDDEN);
+        if (!isParticipant)
+            throw new AppException(ErrorCode.FORBIDDEN);
 
-        // startedAt chỉ set khi người đầu tiên vào call (teacher hoặc learner đầu tiên join)
+        // startedAt chỉ set khi người đầu tiên vào call (teacher hoặc learner đầu tiên
+        // join)
         if (session.getStartedAt() == null) {
             session.setStartedAt(LocalDateTime.now());
             sessionRepository.save(session);
@@ -174,7 +196,8 @@ public class SessionService {
 
         boolean isParticipant = session.getTeacher().getId().equals(user.getId())
                 || session.getLearner().getId().equals(user.getId());
-        if (!isParticipant) throw new AppException(ErrorCode.FORBIDDEN);
+        if (!isParticipant)
+            throw new AppException(ErrorCode.FORBIDDEN);
 
         session.setEndedAt(LocalDateTime.now());
         session.setStatus(SessionStatus.COMPLETED);
@@ -207,8 +230,12 @@ public class SessionService {
     }
 
     private SessionStatus parseStatus(String status) {
-        if (status == null || status.isBlank()) return null;
-        try { return SessionStatus.valueOf(status.toUpperCase()); }
-        catch (IllegalArgumentException e) { return null; }
+        if (status == null || status.isBlank())
+            return null;
+        try {
+            return SessionStatus.valueOf(status.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 }

@@ -38,6 +38,9 @@ public class TeachingSlot {
     @Column(name = "slot_time", nullable = false)
     LocalTime slotTime;
 
+    @Column(name = "slot_end_time")
+    LocalTime slotEndTime;
+
     @Builder.Default
     @Enumerated(EnumType.STRING)
     SlotStatus status = SlotStatus.OPEN;

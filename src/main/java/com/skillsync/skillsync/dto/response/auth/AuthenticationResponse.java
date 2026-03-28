@@ -16,5 +16,8 @@ public class AuthenticationResponse {
     private String refreshToken;
     private String userId;
     private String email;
+    private String fullName;
     private String role;
+    private String avatarUrl;
+    private Boolean hasPassword;
 }

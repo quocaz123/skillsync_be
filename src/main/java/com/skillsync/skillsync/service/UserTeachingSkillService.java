@@ -33,6 +33,15 @@ public class UserTeachingSkillService {
                 .toList();
     }
 
+    /** Public — all APPROVED skills for Explore page */
+    public List<TeachingSkillResponse> getApprovedTeachingSkills() {
+        return teachingSkillRepository
+                .findByVerificationStatus(com.skillsync.skillsync.enums.VerificationStatus.APPROVED)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     public TeachingSkillResponse create(CreateTeachingSkillRequest request) {
         if (request.getSkillId() == null) throw new IllegalArgumentException("skillId không được để trống");
         if (request.getLevel() == null) throw new IllegalArgumentException("level không được để trống");
@@ -92,6 +101,10 @@ public class UserTeachingSkillService {
                 .outcomeDesc(ts.getOutcomeDesc())
                 .creditsPerHour(ts.getCreditsPerHour())
                 .verificationStatus(ts.getVerificationStatus())
+                .teacherId(ts.getUser().getId())
+                .teacherName(ts.getUser().getFullName())
+                .teacherAvatar(ts.getUser().getAvatarUrl())
+                .teacherBio(ts.getUser().getBio())
                 .createdAt(ts.getCreatedAt())
                 .build();
     }

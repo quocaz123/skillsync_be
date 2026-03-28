@@ -61,7 +61,10 @@ public class SlotService {
 
         List<TeachingSlot> toSave = new ArrayList<>();
         for (LocalDate date : request.getDates()) {
-            for (LocalTime time : request.getTimes()) {
+            for (int ti = 0; ti < request.getTimes().size(); ti++) {
+                LocalTime time = request.getTimes().get(ti);
+                LocalTime endTime = (request.getEndTimes() != null && ti < request.getEndTimes().size())
+                        ? request.getEndTimes().get(ti) : null;
                 // Bỏ qua nếu đã tồn tại
                 if (!slotRepository.existsByTeachingSkillIdAndSlotDateAndSlotTime(skill.getId(), date, time)) {
                     toSave.add(TeachingSlot.builder()
@@ -69,6 +72,7 @@ public class SlotService {
                             .teachingSkill(skill)
                             .slotDate(date)
                             .slotTime(time)
+                            .slotEndTime(endTime)
                             .status(SlotStatus.OPEN)
                             .build());
                 }
@@ -103,6 +107,7 @@ public class SlotService {
                 .skillName(s.getTeachingSkill().getSkill().getName())
                 .slotDate(s.getSlotDate())
                 .slotTime(s.getSlotTime())
+                .slotEndTime(s.getSlotEndTime())
                 .status(s.getStatus())
                 .build();
     }

@@ -17,6 +17,7 @@ public interface UserTeachingSkillRepository extends JpaRepository<UserTeachingS
     // Used by AdminTeachingSkillService
     List<UserTeachingSkill> findByVerificationStatusOrderByCreatedAtAsc(VerificationStatus status);
     List<UserTeachingSkill> findAllByOrderByCreatedAtDesc();
+    List<UserTeachingSkill> findByVerificationStatus(VerificationStatus status);
 
     // Used by some services (create/idempotent)
     Optional<UserTeachingSkill> findByUserAndSkillAndLevel(User user, Skill skill, SkillLevel level);

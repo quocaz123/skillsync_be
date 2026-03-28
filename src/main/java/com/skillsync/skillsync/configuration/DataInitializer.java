@@ -36,7 +36,6 @@ public class DataInitializer implements CommandLineRunner {
         seedSkills();
     }
 
-    // ─── Users ────────────────────────────────────────────────────────────────
 
     private void seedUser(String email, String rawPassword, Role role) {
         if (userRepository.findByEmail(email).isEmpty()) {
@@ -83,11 +82,11 @@ public class DataInitializer implements CommandLineRunner {
                 }
             }
 
-            if (seeded > 0) log.info("✅ Seeded {} skills from skills.json", seeded);
-            else            log.info("⏩ Skills already seeded");
+            if (seeded > 0) log.info("Seeded {} skills from skills.json", seeded);
+            else            log.info("Skills already seeded");
 
         } catch (Exception e) {
-            log.error("❌ Failed to seed skills from seeds/skills.json: {}", e.getMessage());
+            log.error("Failed to seed skills from seeds/skills.json: {}", e.getMessage());
         }
     }
 }

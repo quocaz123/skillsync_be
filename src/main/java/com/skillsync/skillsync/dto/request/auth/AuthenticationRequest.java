@@ -12,4 +12,5 @@ import lombok.NoArgsConstructor;
 public class AuthenticationRequest {
     String email;
     String password;
+    String fullName;   // optional – used by /register to store display name
 }

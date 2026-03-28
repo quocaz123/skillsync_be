@@ -25,5 +25,12 @@ public class TeachingSkillResponse {
     String outcomeDesc;
     Integer creditsPerHour;
     VerificationStatus verificationStatus;
+    
+    // Teacher details for explore page
+    UUID teacherId;
+    String teacherName;
+    String teacherAvatar;
+    String teacherBio;
+    
     LocalDateTime createdAt;
 }

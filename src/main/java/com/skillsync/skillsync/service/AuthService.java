@@ -1,5 +1,6 @@
 package com.skillsync.skillsync.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.auth.openidconnect.IdToken.Payload;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
@@ -14,10 +15,13 @@ import com.skillsync.skillsync.exception.AppException;
 import com.skillsync.skillsync.exception.ErrorCode;
 import com.skillsync.skillsync.mapper.UserMapper;
 import com.skillsync.skillsync.repository.UserRepository;
-
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 
 import java.net.URI;
 import java.net.URLEncoder;
@@ -27,12 +31,6 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Map;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
@@ -59,6 +57,12 @@ public class AuthService {
         User user = userMapper.toUser(request);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(Role.USER);
+
+        // Set display name: use provided fullName, else derive from email
+        String fullName = (request.getFullName() != null && !request.getFullName().isBlank())
+                ? request.getFullName().trim()
+                : request.getEmail().split("@")[0];
+        user.setFullName(fullName);
 
         userRepository.save(user);
         return buildAuth(user);
@@ -126,9 +130,11 @@ public class AuthService {
             User user = userRepository.findByEmail(email)
                     .orElseGet(() -> {
                         User newUser = new User();
+                        newUser.setFullName((String) payload.get("name"));
                         newUser.setEmail(email);
-                        // Không lưu password rỗng để tránh lỗi/đánh giá sai khi hệ thống sử dụng luồng login email/pass.
+                        // Random password for Google-only users — hasPassword=false so FE can prompt them to set one
                         newUser.setPassword(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+                        newUser.setHasPassword(false);
                         newUser.setRole(Role.USER);
                         log.info("New user created from Google login: {}", email);
                         return userRepository.save(newUser);
@@ -212,7 +218,10 @@ public class AuthService {
                 .refreshToken(jwtService.generateRefreshToken(user))
                 .userId(user.getId() != null ? user.getId().toString() : null)
                 .email(user.getEmail())
+                .fullName(user.getFullName())
                 .role(user.getRole().name())
+                .avatarUrl(user.getAvatarUrl())
+                .hasPassword(user.getHasPassword() != null ? user.getHasPassword() : true)
                 .build();
     }
 }

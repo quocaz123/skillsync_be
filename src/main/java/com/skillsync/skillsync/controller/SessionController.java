@@ -1,11 +1,11 @@
 package com.skillsync.skillsync.controller;
 
+import com.skillsync.skillsync.dto.common.ApiResponse;
 import com.skillsync.skillsync.dto.request.session.BookSessionRequest;
 import com.skillsync.skillsync.dto.response.session.SessionResponse;
 import com.skillsync.skillsync.dto.response.session.ZegoTokenResponse;
 import com.skillsync.skillsync.service.SessionService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,9 +23,8 @@ public class SessionController {
      * Learner đặt lịch → tạo Session + videoRoomId, trừ credits.
      */
     @PostMapping("/book")
-    @ResponseStatus(HttpStatus.CREATED)
-    public SessionResponse book(@RequestBody BookSessionRequest request) {
-        return sessionService.book(request);
+    public ApiResponse<SessionResponse> book(@RequestBody BookSessionRequest request) {
+        return ApiResponse.success(sessionService.book(request));
     }
 
     /**
@@ -33,10 +32,10 @@ public class SessionController {
      * Trả danh sách sessions của user hiện tại.
      */
     @GetMapping("/mine")
-    public List<SessionResponse> getMySessions(
+    public ApiResponse<List<SessionResponse>> getMySessions(
             @RequestParam(required = false, defaultValue = "all") String role,
             @RequestParam(required = false) String status) {
-        return sessionService.getMySessions(role, status);
+        return ApiResponse.success(sessionService.getMySessions(role, status));
     }
 
     /**
@@ -45,8 +44,8 @@ public class SessionController {
      * Chỉ cấp trong cửa sổ -10min đến +2h so với giờ học.
      */
     @GetMapping("/{id}/zego-token")
-    public ZegoTokenResponse getZegoToken(@PathVariable UUID id) {
-        return sessionService.getZegoToken(id);
+    public ApiResponse<ZegoTokenResponse> getZegoToken(@PathVariable UUID id) {
+        return ApiResponse.success(sessionService.getZegoToken(id));
     }
 
     /**
@@ -55,9 +54,9 @@ public class SessionController {
      * Đặt startedAt (chỉ lần đầu).
      */
     @PostMapping("/{id}/join")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void join(@PathVariable UUID id) {
+    public ApiResponse<Void> join(@PathVariable UUID id) {
         sessionService.markJoin(id);
+        return ApiResponse.success(null);
     }
 
     /**
@@ -66,8 +65,9 @@ public class SessionController {
      * Đặt endedAt + status = COMPLETED.
      */
     @PostMapping("/{id}/leave")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void leave(@PathVariable UUID id) {
+    public ApiResponse<Void> leave(@PathVariable UUID id) {
+
         sessionService.markLeave(id);
+        return ApiResponse.success(null);
     }
 }

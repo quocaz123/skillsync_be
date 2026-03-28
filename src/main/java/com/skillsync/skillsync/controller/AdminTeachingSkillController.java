@@ -5,6 +5,7 @@ import com.skillsync.skillsync.dto.response.skill.AdminTeachingSkillResponse;
 import com.skillsync.skillsync.enums.VerificationStatus;
 import com.skillsync.skillsync.service.AdminTeachingSkillService;
 import lombok.RequiredArgsConstructor;
+import com.skillsync.skillsync.dto.common.ApiResponse;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,10 +23,10 @@ public class AdminTeachingSkillController {
      * Lấy danh sách teaching skills (lọc theo status nếu có).
      */
     @GetMapping
-    public List<AdminTeachingSkillResponse> getAll(
+    public ApiResponse<List<AdminTeachingSkillResponse>> getAll(
             @RequestParam(required = false) VerificationStatus status
     ) {
-        return service.getAll(status);
+        return ApiResponse.success(service.getAll(status));
     }
 
     /**
@@ -33,10 +34,10 @@ public class AdminTeachingSkillController {
      * Body: { "action": "APPROVED" | "REJECTED", "rejectionReason": "..." }
      */
     @PatchMapping("/{id}/verify")
-    public AdminTeachingSkillResponse verify(
+    public ApiResponse<AdminTeachingSkillResponse> verify(
             @PathVariable UUID id,
             @RequestBody VerifyTeachingSkillRequest request
     ) {
-        return service.verify(id, request);
+        return ApiResponse.success(service.verify(id, request));
     }
 }

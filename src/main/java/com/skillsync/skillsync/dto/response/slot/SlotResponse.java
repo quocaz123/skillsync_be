@@ -15,5 +15,6 @@ public class SlotResponse {
     private String skillName;
     private LocalDate slotDate;
     private LocalTime slotTime;
+    private LocalTime slotEndTime;
     private SlotStatus status;
 }

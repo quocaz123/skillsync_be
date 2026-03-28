@@ -5,6 +5,7 @@ import com.skillsync.skillsync.dto.response.user.TeachingSkillEvidenceResponse;
 import com.skillsync.skillsync.service.TeachingSkillEvidenceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import com.skillsync.skillsync.dto.common.ApiResponse;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,22 +19,21 @@ public class TeachingSkillEvidenceController {
     private final TeachingSkillEvidenceService service;
 
     @PostMapping("/{teachingSkillId}")
-    @ResponseStatus(HttpStatus.CREATED)
-    public TeachingSkillEvidenceResponse create(
+    public ApiResponse<TeachingSkillEvidenceResponse> create(
             @PathVariable UUID teachingSkillId,
             @RequestBody TeachingSkillEvidenceRequest request
     ) {
-        return service.create(teachingSkillId, request);
+        return ApiResponse.success(service.create(teachingSkillId, request));
     }
 
     @GetMapping("/teaching-skill/{teachingSkillId}")
-    public List<TeachingSkillEvidenceResponse> getByTeachingSkill(@PathVariable UUID teachingSkillId) {
-        return service.getByTeachingSkill(teachingSkillId);
+    public ApiResponse<List<TeachingSkillEvidenceResponse>> getByTeachingSkill(@PathVariable UUID teachingSkillId) {
+        return ApiResponse.success(service.getByTeachingSkill(teachingSkillId));
     }
 
     @DeleteMapping("/{evidenceId}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable UUID evidenceId) {
+    public ApiResponse<Void> delete(@PathVariable UUID evidenceId) {
         service.delete(evidenceId);
+        return ApiResponse.success(null);
     }
 }

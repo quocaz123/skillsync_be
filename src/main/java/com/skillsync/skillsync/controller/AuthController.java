@@ -29,40 +29,40 @@ public class AuthController {
     private final CookieService cookieService;
 
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<UserAuthResponse>> register(@RequestBody AuthenticationRequest request,
+    public ApiResponse<UserAuthResponse> register(@RequestBody AuthenticationRequest request,
             HttpServletResponse response) {
         AuthenticationResponse auth = authService.register(request);
-        cookieService.setAuthCookies(response, auth);
-        
+        // Do NOT set auth cookies here — user must log in manually after registration
+
         UserAuthResponse userAuthResponse = mapToUserAuthResponse(auth);
-        return ResponseEntity.ok(ApiResponse.success(userAuthResponse));
+        return ApiResponse.success(userAuthResponse);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<UserAuthResponse>> login(@RequestBody LoginRequest request,
+    public ApiResponse<UserAuthResponse> login(@RequestBody LoginRequest request,
             HttpServletResponse response) {
 
         AuthenticationResponse auth = authService.login(request);
         cookieService.setAuthCookies(response, auth);
 
         UserAuthResponse userAuthResponse = mapToUserAuthResponse(auth);
-        return ResponseEntity.ok(ApiResponse.success(userAuthResponse));
+        return ApiResponse.success(userAuthResponse);
     }
 
 
     @PostMapping("/google/exchange")
-    public ResponseEntity<ApiResponse<UserAuthResponse>> googleExchangeCode(@RequestBody GoogleCodeExchangeRequest request,
+    public ApiResponse<UserAuthResponse> googleExchangeCode(@RequestBody GoogleCodeExchangeRequest request,
             HttpServletResponse response) {
         AuthenticationResponse auth = authService.googleExchangeCode(request.getCode(), request.getRedirectUri());
         cookieService.setAuthCookies(response, auth);
 
         UserAuthResponse userAuthResponse = mapToUserAuthResponse(auth);
-        return ResponseEntity.ok(ApiResponse.success(userAuthResponse));
+        return ApiResponse.success(userAuthResponse);
     }
     
 
     @PostMapping("/refresh")
-    public ResponseEntity<ApiResponse<UserAuthResponse>> refresh(
+    public ApiResponse<UserAuthResponse> refresh(
         HttpServletRequest request,
         HttpServletResponse response) {
 
@@ -85,20 +85,23 @@ public class AuthController {
     cookieService.setAuthCookies(response, auth);
 
     UserAuthResponse userAuthResponse = mapToUserAuthResponse(auth);
-    return ResponseEntity.ok(ApiResponse.success(userAuthResponse));
+    return ApiResponse.success(userAuthResponse);
 }
 
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<Void>> logout(HttpServletResponse response) {
+    public ApiResponse<Void> logout(HttpServletResponse response) {
         cookieService.clearAuthCookies(response);
-        return ResponseEntity.ok(new ApiResponse<>(200, "Logged out successfully", null));
+        return ApiResponse.success(null);
     }
 
     private UserAuthResponse mapToUserAuthResponse(AuthenticationResponse auth) {
         return UserAuthResponse.builder()
                 .userId(auth.getUserId())
                 .email(auth.getEmail())
+                .fullName(auth.getFullName())
                 .role(auth.getRole())
+                .avatarUrl(auth.getAvatarUrl())
+                .hasPassword(auth.getHasPassword())
                 .build();
     }
 }

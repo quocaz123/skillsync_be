@@ -46,11 +46,20 @@ public class Session {
     @Column(name = "credit_cost", nullable = false)
     Integer creditCost;
 
-    @Column(name = "jitsi_room_id", length = 100, unique = true)
-    String jitsiRoomId;
+    // Video call — ZEGO
+    @Column(name = "video_room_id", length = 120, unique = true)
+    String videoRoomId;
 
-    @Column(name = "jitsi_room_url", length = 500)
-    String jitsiRoomUrl;
+    @Builder.Default
+    @Column(name = "video_provider", length = 20)
+    String videoProvider = "ZEGO";
+
+    // Lifecycle timestamps
+    @Column(name = "started_at")
+    LocalDateTime startedAt;
+
+    @Column(name = "ended_at")
+    LocalDateTime endedAt;
 
     @Column(name = "learner_notes", columnDefinition = "TEXT")
     String learnerNotes;
