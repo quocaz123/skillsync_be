@@ -14,6 +14,7 @@ import com.skillsync.skillsync.dto.response.forum.VoteResponse;
 import com.skillsync.skillsync.service.ForumCategoryService;
 import com.skillsync.skillsync.service.ForumCommentService;
 import com.skillsync.skillsync.service.ForumPostService;
+import com.skillsync.skillsync.service.ForumRealtimeEventService;
 import com.skillsync.skillsync.service.PostSaveService;
 import com.skillsync.skillsync.service.PostVoteService;
 import jakarta.validation.Valid;
@@ -32,6 +33,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 import java.util.UUID;
@@ -45,6 +47,7 @@ public class ForumController {
     private final PostVoteService voteService;
     private final PostSaveService saveService;
     private final ForumCategoryService categoryService;
+    private final ForumRealtimeEventService forumRealtimeEventService;
 
     // ==================== POSTS ENDPOINTS ====================
 
@@ -124,6 +127,15 @@ public class ForumController {
     @GetMapping("/categories")
     public List<ForumCategoryResponse> getAllCategories() {
         return categoryService.getAllCategories();
+    }
+
+    /**
+     * GET /api/forum/events - Real-time forum moderation updates
+     */
+    @GetMapping(value = "/events", produces = "text/event-stream")
+    @PreAuthorize("isAuthenticated()")
+    public SseEmitter subscribeForumEvents() {
+        return forumRealtimeEventService.subscribe();
     }
 
     /**

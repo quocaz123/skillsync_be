@@ -7,6 +7,7 @@ import com.skillsync.skillsync.entity.ForumComment;
 import com.skillsync.skillsync.entity.ForumPost;
 import com.skillsync.skillsync.entity.CommentVote;
 import com.skillsync.skillsync.entity.User;
+import com.skillsync.skillsync.enums.ForumPostStatus;
 import com.skillsync.skillsync.repository.ForumCommentRepository;
 import com.skillsync.skillsync.repository.ForumPostRepository;
 import com.skillsync.skillsync.repository.CommentVoteRepository;
@@ -45,6 +46,8 @@ public class ForumCommentService {
         ForumComment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new RuntimeException("Comment not found with id: " + commentId));
 
+        ensurePostAccessible(comment.getPost(), currentUser);
+
         if (commentVoteRepository.existsByCommentIdAndUserId(commentId, currentUser.getId())) {
             commentVoteRepository.deleteByCommentIdAndUserId(commentId, currentUser.getId());
         } else {
@@ -75,6 +78,8 @@ public class ForumCommentService {
 
         ForumPost post = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("Post not found with id: " + postId));
+
+        ensurePostAccessible(post, author);
 
         ForumComment parentComment = null;
         if (request.getParentCommentId() != null) {
@@ -107,6 +112,8 @@ public class ForumCommentService {
             throw new RuntimeException("Unauthorized: only author can update this comment");
         }
 
+        ensurePostAccessible(comment.getPost(), currentUser);
+
         if (request.getContent() != null) {
             comment.setContent(request.getContent());
         }
@@ -128,6 +135,8 @@ public class ForumCommentService {
         if (!comment.getAuthor().getId().equals(currentUser.getId())) {
             throw new RuntimeException("Unauthorized: only author can delete this comment");
         }
+
+        ensurePostAccessible(comment.getPost(), currentUser);
 
         commentRepository.delete(comment);
     }
@@ -212,5 +221,19 @@ public class ForumCommentService {
                 .createdAt(comment.getCreatedAt())
                 .updatedAt(comment.getUpdatedAt())
                 .build();
+    }
+
+    private void ensurePostAccessible(ForumPost post, User currentUser) {
+        if (post == null) {
+            throw new RuntimeException("Post not found");
+        }
+
+        boolean isAdmin = currentUser != null && currentUser.getRole() != null && "ADMIN".equalsIgnoreCase(currentUser.getRole().name());
+        boolean isAuthor = currentUser != null && post.getAuthor() != null && post.getAuthor().getId().equals(currentUser.getId());
+        boolean approved = post.getStatus() == ForumPostStatus.APPROVED;
+
+        if (!approved && !isAdmin && !isAuthor) {
+            throw new RuntimeException("Post not found");
+        }
     }
 }

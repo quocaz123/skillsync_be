@@ -1,6 +1,7 @@
 package com.skillsync.skillsync.dto.response.forum;
 
 import com.skillsync.skillsync.enums.PostType;
+import com.skillsync.skillsync.enums.ForumPostStatus;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
@@ -33,6 +34,10 @@ public class ForumPostDetailResponse {
     Boolean liked;
     Boolean saved;
     List<CommentResponse> comments;
+    ForumPostStatus status;
+    String rejectionReason;
+    LocalDateTime reviewedAt;
+    String reviewedByEmail;
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
 }

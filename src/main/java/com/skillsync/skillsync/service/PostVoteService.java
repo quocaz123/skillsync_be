@@ -4,6 +4,7 @@ import com.skillsync.skillsync.dto.response.forum.VoteResponse;
 import com.skillsync.skillsync.entity.ForumPost;
 import com.skillsync.skillsync.entity.PostVote;
 import com.skillsync.skillsync.entity.User;
+import com.skillsync.skillsync.enums.ForumPostStatus;
 import com.skillsync.skillsync.enums.VoteType;
 import com.skillsync.skillsync.repository.ForumPostRepository;
 import com.skillsync.skillsync.repository.PostVoteRepository;
@@ -34,6 +35,8 @@ public class PostVoteService {
 
         ForumPost post = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("Post not found with id: " + postId));
+
+        ensurePostAccessible(post, user);
 
         Optional<PostVote> existingVote = voteRepository.findByPostIdAndUserId(postId, user.getId());
 
@@ -94,6 +97,14 @@ public class PostVoteService {
                 .voteType(vote.getVoteType())
                 .createdAt(vote.getCreatedAt())
                 .build();
+    }
+
+    private void ensurePostAccessible(ForumPost post, User currentUser) {
+        boolean isAdmin = currentUser != null && currentUser.getRole() != null && "ADMIN".equalsIgnoreCase(currentUser.getRole().name());
+        boolean isAuthor = currentUser != null && post.getAuthor() != null && post.getAuthor().getId().equals(currentUser.getId());
+        if (post.getStatus() != ForumPostStatus.APPROVED && !isAdmin && !isAuthor) {
+            throw new RuntimeException("Post not found with id: " + post.getId());
+        }
     }
 
     /**

@@ -5,16 +5,19 @@ import com.skillsync.skillsync.entity.ForumCategory;
 import com.skillsync.skillsync.entity.ForumPost;
 import com.skillsync.skillsync.entity.PostSave;
 import com.skillsync.skillsync.entity.User;
+import com.skillsync.skillsync.enums.ForumPostStatus;
 import com.skillsync.skillsync.enums.VoteType;
 import com.skillsync.skillsync.repository.ForumPostRepository;
 import com.skillsync.skillsync.repository.PostSaveRepository;
 import com.skillsync.skillsync.repository.PostVoteRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -35,6 +38,8 @@ public class PostSaveService {
 
         ForumPost post = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("Post not found with id: " + postId));
+
+        ensurePostAccessible(post, user);
 
         if (!saveRepository.existsByPostIdAndUserId(postId, user.getId())) {
             PostSave save = PostSave.builder()
@@ -70,6 +75,8 @@ public class PostSaveService {
             ForumPost post = postRepository.findById(postId)
                     .orElseThrow(() -> new RuntimeException("Post not found with id: " + postId));
 
+                ensurePostAccessible(post, user);
+
             PostSave save = PostSave.builder()
                     .post(post)
                     .user(user)
@@ -82,18 +89,29 @@ public class PostSaveService {
      * Get current user's saved posts
      */
     public Page<ForumPostResponse> getUserSavedPosts(Pageable pageable) {
-        User user = userService.getCurrentUser();
+        User user = getCurrentUserOrNull();
+        if (user == null) {
+            return new org.springframework.data.domain.PageImpl<>(List.of(), pageable, 0);
+        }
 
         Page<PostSave> saves = saveRepository.findByUserIdOrderByCreatedAtDesc(user.getId(), pageable);
+        List<ForumPostResponse> content = saves.stream()
+            .map(PostSave::getPost)
+            .filter(post -> canAccess(post, user))
+            .map(post -> toPostResponse(post, user))
+            .toList();
 
-        return saves.map(save -> toPostResponse(save.getPost(), user));
+        return new PageImpl<>(content, pageable, content.size());
     }
 
     /**
      * Check if post is saved by current user
      */
     public boolean isPostSaved(UUID postId) {
-        User user = userService.getCurrentUser();
+        User user = getCurrentUserOrNull();
+        if (user == null) {
+            return false;
+        }
         return saveRepository.existsByPostIdAndUserId(postId, user.getId());
     }
 
@@ -145,8 +163,35 @@ public class PostSaveService {
                 .solved(post.getSolved())
                 .liked(liked)
                 .saved(saved)
+                .status(post.getStatus())
+                .rejectionReason(post.getRejectionReason())
+                .reviewedAt(post.getReviewedAt())
+                .reviewedByEmail(post.getReviewedBy() != null ? post.getReviewedBy().getEmail() : null)
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())
                 .build();
+    }
+
+    private void ensurePostAccessible(ForumPost post, User currentUser) {
+        if (!canAccess(post, currentUser)) {
+            throw new RuntimeException("Post not found with id: " + post.getId());
+        }
+    }
+
+    private boolean canAccess(ForumPost post, User currentUser) {
+        if (post == null || currentUser == null) {
+            return false;
+        }
+        boolean isAdmin = currentUser.getRole() != null && "ADMIN".equalsIgnoreCase(currentUser.getRole().name());
+        boolean isAuthor = post.getAuthor() != null && post.getAuthor().getId().equals(currentUser.getId());
+        return post.getStatus() == ForumPostStatus.APPROVED || isAdmin || isAuthor;
+    }
+
+    private User getCurrentUserOrNull() {
+        try {
+            return userService.getCurrentUser();
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 }

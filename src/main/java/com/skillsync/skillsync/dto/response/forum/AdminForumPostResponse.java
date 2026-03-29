@@ -1,7 +1,7 @@
 package com.skillsync.skillsync.dto.response.forum;
 
-import com.skillsync.skillsync.enums.PostType;
 import com.skillsync.skillsync.enums.ForumPostStatus;
+import com.skillsync.skillsync.enums.PostType;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
@@ -14,10 +14,11 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class ForumPostResponse {
+public class AdminForumPostResponse {
     UUID id;
     UUID authorId;
     String authorName;
+    String authorEmail;
     String authorRole;
     String authorAvatar;
     UUID categoryId;
@@ -26,17 +27,15 @@ public class ForumPostResponse {
     String content;
     PostType postType;
     List<String> tags;
-    Long upvotes;
-    Long downvotes;
-    Long commentCount;
-    Long saveCount;
-    Boolean solved;
-    Boolean liked;
-    Boolean saved;
     ForumPostStatus status;
     String rejectionReason;
     LocalDateTime reviewedAt;
     String reviewedByEmail;
+    Boolean solved;
+    Long upvotes;
+    Long downvotes;
+    Long commentCount;
+    Long saveCount;
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
 }

@@ -20,10 +20,14 @@ public class ForumCategoryService {
      * Get all categories sorted by display order
      */
     public List<ForumCategoryResponse> getAllCategories() {
-        List<ForumCategory> categories = categoryRepository.findAllByOrderByDisplayOrderAsc();
-        return categories.stream()
-                .map(this::toResponse)
-                .toList();
+        try {
+            List<ForumCategory> categories = categoryRepository.findAllByOrderByDisplayOrderAsc();
+            return categories.stream()
+                    .map(this::toResponse)
+                    .toList();
+        } catch (Exception e) {
+            return List.of();
+        }
     }
 
     /**

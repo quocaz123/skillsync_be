@@ -2,13 +2,16 @@ package com.skillsync.skillsync.service;
 
 import com.skillsync.skillsync.dto.request.forum.CreateForumPostRequest;
 import com.skillsync.skillsync.dto.request.forum.UpdateForumPostRequest;
+import com.skillsync.skillsync.dto.request.forum.VerifyForumPostRequest;
+import com.skillsync.skillsync.dto.event.forum.ForumPostChangedEvent;
+import com.skillsync.skillsync.dto.response.forum.AdminForumPostResponse;
 import com.skillsync.skillsync.dto.response.forum.ForumPostDetailResponse;
 import com.skillsync.skillsync.dto.response.forum.ForumPostResponse;
 import com.skillsync.skillsync.entity.ForumCategory;
 import com.skillsync.skillsync.entity.ForumPost;
-import com.skillsync.skillsync.entity.PostSave;
-import com.skillsync.skillsync.entity.PostVote;
 import com.skillsync.skillsync.entity.User;
+import com.skillsync.skillsync.enums.ForumPostStatus;
+import com.skillsync.skillsync.enums.PostType;
 import com.skillsync.skillsync.enums.VoteType;
 import com.skillsync.skillsync.repository.ForumCategoryRepository;
 import com.skillsync.skillsync.repository.ForumPostRepository;
@@ -16,8 +19,8 @@ import com.skillsync.skillsync.repository.PostSaveRepository;
 import com.skillsync.skillsync.repository.PostVoteRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,48 +36,88 @@ public class ForumPostService {
     private final PostSaveRepository saveRepository;
     private final UserService userService;
     private final ForumCommentService commentService;
+    private final ForumRealtimeEventService forumRealtimeEventService;
+
+    public List<AdminForumPostResponse> getAdminPosts(ForumPostStatus status) {
+        List<ForumPost> posts = status != null
+                ? postRepository.findByStatusOrderByCreatedAtDesc(status)
+                : postRepository.findAllByOrderByCreatedAtDesc(Pageable.unpaged()).getContent();
+
+        return posts.stream().map(this::toAdminResponse).toList();
+    }
+
+    @Transactional
+    public AdminForumPostResponse verifyPost(UUID postId, VerifyForumPostRequest request) {
+        User admin = userService.getCurrentUser();
+        ForumPost post = postRepository.findById(postId)
+                .orElseThrow(() -> new RuntimeException("Post not found with id: " + postId));
+
+        if (!"APPROVED".equalsIgnoreCase(request.getAction()) && !"REJECTED".equalsIgnoreCase(request.getAction())) {
+            throw new IllegalArgumentException("action must be APPROVED or REJECTED");
+        }
+        if ("REJECTED".equalsIgnoreCase(request.getAction()) && (request.getRejectionReason() == null || request.getRejectionReason().isBlank())) {
+            throw new IllegalArgumentException("rejectionReason is required when rejecting a post");
+        }
+
+        post.setStatus("APPROVED".equalsIgnoreCase(request.getAction())
+                ? ForumPostStatus.APPROVED
+                : ForumPostStatus.REJECTED);
+        post.setReviewedBy(admin);
+        post.setReviewedAt(java.time.LocalDateTime.now());
+        post.setRejectionReason("REJECTED".equalsIgnoreCase(request.getAction()) ? request.getRejectionReason() : null);
+
+        ForumPost saved = postRepository.save(post);
+        forumRealtimeEventService.publishForumPostChangedEvent(
+            ForumPostChangedEvent.builder()
+                .action("VERIFY")
+                .postId(saved.getId())
+                .title(saved.getTitle())
+                .status(saved.getStatus())
+                .rejectionReason(saved.getRejectionReason())
+                .reviewedAt(saved.getReviewedAt())
+                .reviewedByEmail(saved.getReviewedBy() != null ? saved.getReviewedBy().getEmail() : null)
+                .authorId(saved.getAuthor() != null ? saved.getAuthor().getId() : null)
+                .categoryId(saved.getCategory() != null ? saved.getCategory().getId() : null)
+                .build()
+        );
+
+        return toAdminResponse(saved);
+    }
 
     /**
      * Get all posts with pagination
      */
+    @Transactional(readOnly = true)
     public Page<ForumPostResponse> getAllPosts(UUID categoryId, String searchKeyword, Pageable pageable) {
-        User currentUser = null;
-        try {
-            currentUser = userService.getCurrentUser();
-        } catch (Exception ignored) {
-            // Anonymous users can still browse the forum.
-        }
+        User currentUser = getCurrentUserOrNull();
+        Page<ForumPost> posts = postRepository.searchByStatusAndCategoryAndKeyword(
+                ForumPostStatus.APPROVED,
+                categoryId,
+                searchKeyword,
+                pageable);
 
-        Page<ForumPost> posts;
+        List<ForumPostResponse> content = posts.getContent().stream()
+            .map(post -> toResponseSafely(post, currentUser))
+            .filter(java.util.Objects::nonNull)
+            .toList();
 
-        if (categoryId != null && searchKeyword != null && !searchKeyword.isEmpty()) {
-            // Both category and search keyword provided - filter by category AND search in title/content
-            posts = postRepository.findByCategoryIdAndTitleContainingIgnoreCaseOrCategoryIdAndContentContainingIgnoreCaseOrderByCreatedAtDesc(
-                    categoryId, searchKeyword, categoryId, searchKeyword, pageable);
-        } else if (categoryId != null) {
-            // Only category filter
-            posts = postRepository.findByCategoryIdOrderByCreatedAtDesc(categoryId, pageable);
-        } else if (searchKeyword != null && !searchKeyword.isEmpty()) {
-            // Only search keyword
-            posts = postRepository.findByTitleContainingIgnoreCaseOrContentContainingIgnoreCaseOrderByCreatedAtDesc(
-                    searchKeyword, searchKeyword, pageable);
-        } else {
-            // No filters - get all posts
-            posts = postRepository.findAllByOrderByCreatedAtDesc(pageable);
-        }
-
-        User finalCurrentUser = currentUser;
-        return posts.map(post -> toResponse(post, finalCurrentUser));
+        return new PageImpl<>(content, pageable, posts.getTotalElements());
     }
 
     /**
      * Get post by ID with comments
      */
+    @Transactional(readOnly = true)
     public ForumPostDetailResponse getPostById(UUID postId) {
-        ForumPost post = postRepository.findById(postId)
+        ForumPost post = postRepository.findWithDetailsById(postId)
                 .orElseThrow(() -> new RuntimeException("Post not found with id: " + postId));
 
-        return toDetailResponse(post);
+        User currentUser = getCurrentUserOrNull();
+        if (!canViewPost(post, currentUser)) {
+            throw new RuntimeException("Post not found with id: " + postId);
+        }
+
+        return toDetailResponse(post, currentUser);
     }
 
     /**
@@ -94,12 +137,29 @@ public class ForumPostService {
                 .category(category)
                 .title(request.getTitle())
                 .content(request.getContent())
-                .postType(request.getPostType())
+            .postType(request.getPostType() != null ? request.getPostType() : PostType.DISCUSSION)
                 .tags(tagsString)
+            .status(ForumPostStatus.PENDING)
+            .rejectionReason(null)
+            .reviewedBy(null)
+            .reviewedAt(null)
                 .solved(false)
                 .build();
 
         ForumPost saved = postRepository.save(post);
+        forumRealtimeEventService.publishForumPostChangedEvent(
+            ForumPostChangedEvent.builder()
+                .action("CREATE")
+                .postId(saved.getId())
+                .title(saved.getTitle())
+                .status(saved.getStatus())
+                .rejectionReason(saved.getRejectionReason())
+                .reviewedAt(saved.getReviewedAt())
+                .reviewedByEmail(saved.getReviewedBy() != null ? saved.getReviewedBy().getEmail() : null)
+                .authorId(saved.getAuthor() != null ? saved.getAuthor().getId() : null)
+                .categoryId(saved.getCategory() != null ? saved.getCategory().getId() : null)
+                .build()
+        );
         return toResponse(saved);
     }
 
@@ -129,6 +189,8 @@ public class ForumPostService {
         }
         if (request.getPostType() != null) {
             post.setPostType(request.getPostType());
+        } else if (post.getPostType() == null) {
+            post.setPostType(PostType.DISCUSSION);
         }
         if (request.getTags() != null) {
             post.setTags(String.join(",", request.getTags()));
@@ -137,7 +199,25 @@ public class ForumPostService {
             post.setSolved(request.getSolved());
         }
 
+        post.setStatus(ForumPostStatus.PENDING);
+        post.setRejectionReason(null);
+        post.setReviewedBy(null);
+        post.setReviewedAt(null);
+
         ForumPost updated = postRepository.save(post);
+        forumRealtimeEventService.publishForumPostChangedEvent(
+            ForumPostChangedEvent.builder()
+                .action("UPDATE")
+                .postId(updated.getId())
+                .title(updated.getTitle())
+                .status(updated.getStatus())
+                .rejectionReason(updated.getRejectionReason())
+                .reviewedAt(updated.getReviewedAt())
+                .reviewedByEmail(updated.getReviewedBy() != null ? updated.getReviewedBy().getEmail() : null)
+                .authorId(updated.getAuthor() != null ? updated.getAuthor().getId() : null)
+                .categoryId(updated.getCategory() != null ? updated.getCategory().getId() : null)
+                .build()
+        );
         return toResponse(updated);
     }
 
@@ -154,23 +234,32 @@ public class ForumPostService {
             throw new RuntimeException("Unauthorized: only author can delete this post");
         }
 
+        forumRealtimeEventService.publishForumPostChangedEvent(
+            ForumPostChangedEvent.builder()
+                .action("DELETE")
+                .postId(post.getId())
+                .title(post.getTitle())
+                .status(post.getStatus())
+                .rejectionReason(post.getRejectionReason())
+                .reviewedAt(post.getReviewedAt())
+                .reviewedByEmail(post.getReviewedBy() != null ? post.getReviewedBy().getEmail() : null)
+                .authorId(post.getAuthor() != null ? post.getAuthor().getId() : null)
+                .categoryId(post.getCategory() != null ? post.getCategory().getId() : null)
+                .build()
+        );
+
         postRepository.delete(post);
     }
 
     /**
      * Get trending posts (top 10 by comment count)
      */
+    @Transactional(readOnly = true)
     public List<ForumPostResponse> getTrendingPosts(int limit) {
-        User currentUser = null;
-        try {
-            currentUser = userService.getCurrentUser();
-        } catch (Exception ignored) {
-            // Anonymous users can still browse the forum.
-        }
-
-        User finalCurrentUser = currentUser;
-        return postRepository.findAll().stream()
-            .map(post -> toResponse(post, finalCurrentUser))
+        User currentUser = getCurrentUserOrNull();
+        return postRepository.findByStatusOrderByCreatedAtDesc(ForumPostStatus.APPROVED).stream()
+            .map(post -> toResponseSafely(post, currentUser))
+            .filter(java.util.Objects::nonNull)
             .sorted((left, right) -> {
                 long leftComments = left.getCommentCount() != null ? left.getCommentCount() : 0L;
                 long rightComments = right.getCommentCount() != null ? right.getCommentCount() : 0L;
@@ -198,17 +287,22 @@ public class ForumPostService {
     /**
      * Get user's posts
      */
+    @Transactional(readOnly = true)
     public Page<ForumPostResponse> getUserPosts(UUID userId, Pageable pageable) {
-        User currentUser = null;
-        try {
-            currentUser = userService.getCurrentUser();
-        } catch (Exception ignored) {
-            // Anonymous users can still browse the forum.
-        }
+        User currentUser = getCurrentUserOrNull();
+        boolean ownProfile = currentUser != null && currentUser.getId().equals(userId);
+        boolean adminView = currentUser != null && currentUser.getRole() != null && "ADMIN".equalsIgnoreCase(currentUser.getRole().name());
 
-        User finalCurrentUser = currentUser;
-        Page<ForumPost> posts = postRepository.findByAuthorIdOrderByCreatedAtDesc(userId, pageable);
-        return posts.map(post -> toResponse(post, finalCurrentUser));
+        Page<ForumPost> posts = (ownProfile || adminView)
+                ? postRepository.findByAuthorIdOrderByCreatedAtDesc(userId, pageable)
+                : postRepository.findByAuthorIdAndStatusOrderByCreatedAtDesc(userId, ForumPostStatus.APPROVED, pageable);
+
+        List<ForumPostResponse> content = posts.getContent().stream()
+            .map(post -> toResponseSafely(post, currentUser))
+            .filter(java.util.Objects::nonNull)
+            .toList();
+
+        return new PageImpl<>(content, pageable, posts.getTotalElements());
     }
 
     /**
@@ -271,21 +365,68 @@ public class ForumPostService {
                 .solved(post.getSolved())
                 .liked(liked)
                 .saved(saved)
+                .status(post.getStatus())
+                .rejectionReason(post.getRejectionReason())
+                .reviewedAt(post.getReviewedAt())
+                .reviewedByEmail(post.getReviewedBy() != null ? post.getReviewedBy().getEmail() : null)
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())
                 .build();
     }
 
+    private ForumPostResponse toResponseSafely(ForumPost post, User currentUser) {
+        try {
+            return toResponse(post, currentUser);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+            private AdminForumPostResponse toAdminResponse(ForumPost post) {
+            Long upvotes = voteRepository.countByPostIdAndVoteType(post.getId(), VoteType.UPVOTE);
+            Long downvotes = voteRepository.countByPostIdAndVoteType(post.getId(), VoteType.DOWNVOTE);
+            Long commentCount = commentService.getCommentCount(post.getId());
+            Long saveCount = saveRepository.countByPostId(post.getId());
+
+            List<String> tags = post.getTags() != null && !post.getTags().isEmpty()
+                ? List.of(post.getTags().split(","))
+                : List.of();
+
+            return AdminForumPostResponse.builder()
+                .id(post.getId())
+                .authorId(post.getAuthor().getId())
+                .authorName(post.getAuthor().getFullName())
+                .authorEmail(post.getAuthor().getEmail())
+                .authorRole(post.getAuthor().getRole() != null ? post.getAuthor().getRole().name() : "USER")
+                .authorAvatar(post.getAuthor().getAvatarUrl())
+                .categoryId(post.getCategory().getId())
+                .categoryName(post.getCategory().getName())
+                .title(post.getTitle())
+                .content(post.getContent())
+                .postType(post.getPostType())
+                .tags(tags)
+                .status(post.getStatus())
+                .rejectionReason(post.getRejectionReason())
+                .reviewedAt(post.getReviewedAt())
+                .reviewedByEmail(post.getReviewedBy() != null ? post.getReviewedBy().getEmail() : null)
+                .solved(post.getSolved())
+                .upvotes(upvotes)
+                .downvotes(downvotes)
+                .commentCount(commentCount)
+                .saveCount(saveCount)
+                .createdAt(post.getCreatedAt())
+                .updatedAt(post.getUpdatedAt())
+                .build();
+            }
+
     /**
      * Convert entity to detail response with comments
      */
     private ForumPostDetailResponse toDetailResponse(ForumPost post) {
-        User currentUser = null;
-        try {
-            currentUser = userService.getCurrentUser();
-        } catch (Exception e) {
-            // Ignore if not authenticated
-        }
+        return toDetailResponse(post, getCurrentUserOrNull());
+    }
+
+    private ForumPostDetailResponse toDetailResponse(ForumPost post, User currentUser) {
 
         Long upvotes = voteRepository.countByPostIdAndVoteType(post.getId(), VoteType.UPVOTE);
         Long downvotes = voteRepository.countByPostIdAndVoteType(post.getId(), VoteType.DOWNVOTE);
@@ -326,8 +467,32 @@ public class ForumPostService {
                 .liked(liked)
                 .saved(saved)
                 .comments(commentService.getPostComments(post.getId()))
+                .status(post.getStatus())
+                .rejectionReason(post.getRejectionReason())
+                .reviewedAt(post.getReviewedAt())
+                .reviewedByEmail(post.getReviewedBy() != null ? post.getReviewedBy().getEmail() : null)
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())
                 .build();
+    }
+
+    private User getCurrentUserOrNull() {
+        try {
+            return userService.getCurrentUser();
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private boolean canViewPost(ForumPost post, User currentUser) {
+        if (post.getStatus() == ForumPostStatus.APPROVED) {
+            return true;
+        }
+        if (currentUser == null) {
+            return false;
+        }
+        boolean isAdmin = currentUser.getRole() != null && "ADMIN".equalsIgnoreCase(currentUser.getRole().name());
+        boolean isAuthor = post.getAuthor() != null && post.getAuthor().getId().equals(currentUser.getId());
+        return isAdmin || isAuthor;
     }
 }
