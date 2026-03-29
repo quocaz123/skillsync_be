@@ -21,6 +21,8 @@ public class CommentResponse {
     String authorRole;
     String authorAvatar;
     String content;
+    Long likeCount;
+    Boolean liked;
     List<CommentResponse> replies;
     LocalDateTime createdAt;
     LocalDateTime updatedAt;

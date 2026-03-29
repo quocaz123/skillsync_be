@@ -5,9 +5,11 @@ import com.skillsync.skillsync.dto.request.forum.UpdateCommentRequest;
 import com.skillsync.skillsync.dto.response.forum.CommentResponse;
 import com.skillsync.skillsync.entity.ForumComment;
 import com.skillsync.skillsync.entity.ForumPost;
+import com.skillsync.skillsync.entity.CommentVote;
 import com.skillsync.skillsync.entity.User;
 import com.skillsync.skillsync.repository.ForumCommentRepository;
 import com.skillsync.skillsync.repository.ForumPostRepository;
+import com.skillsync.skillsync.repository.CommentVoteRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +22,7 @@ import java.util.UUID;
 public class ForumCommentService {
     private final ForumCommentRepository commentRepository;
     private final ForumPostRepository postRepository;
+    private final CommentVoteRepository commentVoteRepository;
     private final UserService userService;
 
     /**
@@ -30,6 +33,29 @@ public class ForumCommentService {
         return rootComments.stream()
                 .map(this::toResponseWithReplies)
                 .toList();
+    }
+
+    /**
+     * Toggle like for a comment
+     */
+    @Transactional
+    public CommentResponse toggleLike(UUID commentId) {
+        User currentUser = userService.getCurrentUser();
+
+        ForumComment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new RuntimeException("Comment not found with id: " + commentId));
+
+        if (commentVoteRepository.existsByCommentIdAndUserId(commentId, currentUser.getId())) {
+            commentVoteRepository.deleteByCommentIdAndUserId(commentId, currentUser.getId());
+        } else {
+            CommentVote vote = CommentVote.builder()
+                    .comment(comment)
+                    .user(currentUser)
+                    .build();
+            commentVoteRepository.save(vote);
+        }
+
+        return toResponseWithReplies(comment);
     }
 
     /**
@@ -126,6 +152,15 @@ public class ForumCommentService {
 
         User author = comment.getAuthor();
         List<CommentResponse> replies = getCommentReplies(comment.getId());
+        User currentUser = null;
+        try {
+            currentUser = userService.getCurrentUser();
+        } catch (Exception ignored) {
+            // Anonymous readers can still view comments.
+        }
+
+        Long likeCount = commentVoteRepository.countByCommentId(comment.getId());
+        Boolean liked = currentUser != null && commentVoteRepository.existsByCommentIdAndUserId(comment.getId(), currentUser.getId());
 
         return CommentResponse.builder()
                 .id(comment.getId())
@@ -136,6 +171,8 @@ public class ForumCommentService {
                 .authorRole(author.getRole() != null ? author.getRole().name() : "USER")
                 .authorAvatar(author.getAvatarUrl())
                 .content(comment.getContent())
+                .likeCount(likeCount)
+                .liked(liked)
                 .replies(replies)
                 .createdAt(comment.getCreatedAt())
                 .updatedAt(comment.getUpdatedAt())
@@ -151,6 +188,15 @@ public class ForumCommentService {
         }
 
         User author = comment.getAuthor();
+        User currentUser = null;
+        try {
+            currentUser = userService.getCurrentUser();
+        } catch (Exception ignored) {
+            // Anonymous readers can still view comments.
+        }
+
+        Long likeCount = commentVoteRepository.countByCommentId(comment.getId());
+        Boolean liked = currentUser != null && commentVoteRepository.existsByCommentIdAndUserId(comment.getId(), currentUser.getId());
 
         return CommentResponse.builder()
                 .id(comment.getId())
@@ -161,6 +207,8 @@ public class ForumCommentService {
                 .authorRole(author.getRole() != null ? author.getRole().name() : "USER")
                 .authorAvatar(author.getAvatarUrl())
                 .content(comment.getContent())
+                .likeCount(likeCount)
+                .liked(liked)
                 .createdAt(comment.getCreatedAt())
                 .updatedAt(comment.getUpdatedAt())
                 .build();

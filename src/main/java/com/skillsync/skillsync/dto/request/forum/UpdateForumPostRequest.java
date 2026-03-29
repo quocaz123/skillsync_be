@@ -6,6 +6,7 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 import java.util.List;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -13,6 +14,8 @@ import java.util.List;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UpdateForumPostRequest {
+    UUID categoryId;
+
     @Size(min = 3, max = 200, message = "Title must be between 3 and 200 characters")
     String title;
 

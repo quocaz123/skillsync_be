@@ -111,6 +111,11 @@ public class ForumPostService {
         if (request.getTitle() != null) {
             post.setTitle(request.getTitle());
         }
+        if (request.getCategoryId() != null) {
+            ForumCategory category = categoryRepository.findById(request.getCategoryId())
+                    .orElseThrow(() -> new RuntimeException("Category not found with id: " + request.getCategoryId()));
+            post.setCategory(category);
+        }
         if (request.getContent() != null) {
             post.setContent(request.getContent());
         }
@@ -148,11 +153,26 @@ public class ForumPostService {
      * Get trending posts (top 10 by recent + vote count)
      */
     public List<ForumPostResponse> getTrendingPosts(int limit) {
-        List<ForumPost> posts = postRepository.findTop10ByOrderByCreatedAtDesc();
-        return posts.stream()
-                .limit(limit)
-                .map(this::toResponse)
-                .toList();
+        return postRepository.findAll().stream()
+            .map(this::toResponse)
+            .sorted((left, right) -> {
+                long leftScore = (left.getUpvotes() != null ? left.getUpvotes() : 0L) * 2
+                    + (left.getCommentCount() != null ? left.getCommentCount() : 0L)
+                    + (left.getSaveCount() != null ? left.getSaveCount() : 0L);
+                long rightScore = (right.getUpvotes() != null ? right.getUpvotes() : 0L) * 2
+                    + (right.getCommentCount() != null ? right.getCommentCount() : 0L)
+                    + (right.getSaveCount() != null ? right.getSaveCount() : 0L);
+
+                int scoreCompare = Long.compare(rightScore, leftScore);
+                if (scoreCompare != 0) return scoreCompare;
+
+                if (left.getCreatedAt() == null && right.getCreatedAt() == null) return 0;
+                if (left.getCreatedAt() == null) return 1;
+                if (right.getCreatedAt() == null) return -1;
+                return right.getCreatedAt().compareTo(left.getCreatedAt());
+            })
+            .limit(limit)
+            .toList();
     }
 
     /**

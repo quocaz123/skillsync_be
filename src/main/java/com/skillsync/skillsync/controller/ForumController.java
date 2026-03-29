@@ -171,6 +171,15 @@ public class ForumController {
         commentService.deleteComment(commentId);
     }
 
+    /**
+     * POST /api/forum/comments/{commentId}/vote - Toggle like on comment
+     */
+    @PostMapping("/comments/{commentId}/vote")
+    @PreAuthorize("isAuthenticated()")
+    public CommentResponse toggleCommentLike(@PathVariable UUID commentId) {
+        return commentService.toggleLike(commentId);
+    }
+
     // ==================== VOTES ENDPOINTS ====================
 
     /**
