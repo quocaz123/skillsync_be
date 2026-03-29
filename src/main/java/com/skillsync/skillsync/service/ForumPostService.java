@@ -38,6 +38,13 @@ public class ForumPostService {
      * Get all posts with pagination
      */
     public Page<ForumPostResponse> getAllPosts(UUID categoryId, String searchKeyword, Pageable pageable) {
+        User currentUser = null;
+        try {
+            currentUser = userService.getCurrentUser();
+        } catch (Exception ignored) {
+            // Anonymous users can still browse the forum.
+        }
+
         Page<ForumPost> posts;
 
         if (categoryId != null && searchKeyword != null && !searchKeyword.isEmpty()) {
@@ -56,7 +63,8 @@ public class ForumPostService {
             posts = postRepository.findAllByOrderByCreatedAtDesc(pageable);
         }
 
-        return posts.map(this::toResponse);
+        User finalCurrentUser = currentUser;
+        return posts.map(post -> toResponse(post, finalCurrentUser));
     }
 
     /**
@@ -150,17 +158,29 @@ public class ForumPostService {
     }
 
     /**
-     * Get trending posts (top 10 by recent + vote count)
+     * Get trending posts (top 10 by comment count)
      */
     public List<ForumPostResponse> getTrendingPosts(int limit) {
+        User currentUser = null;
+        try {
+            currentUser = userService.getCurrentUser();
+        } catch (Exception ignored) {
+            // Anonymous users can still browse the forum.
+        }
+
+        User finalCurrentUser = currentUser;
         return postRepository.findAll().stream()
-            .map(this::toResponse)
+            .map(post -> toResponse(post, finalCurrentUser))
             .sorted((left, right) -> {
+                long leftComments = left.getCommentCount() != null ? left.getCommentCount() : 0L;
+                long rightComments = right.getCommentCount() != null ? right.getCommentCount() : 0L;
+
+                int commentCompare = Long.compare(rightComments, leftComments);
+                if (commentCompare != 0) return commentCompare;
+
                 long leftScore = (left.getUpvotes() != null ? left.getUpvotes() : 0L) * 2
-                    + (left.getCommentCount() != null ? left.getCommentCount() : 0L)
                     + (left.getSaveCount() != null ? left.getSaveCount() : 0L);
                 long rightScore = (right.getUpvotes() != null ? right.getUpvotes() : 0L) * 2
-                    + (right.getCommentCount() != null ? right.getCommentCount() : 0L)
                     + (right.getSaveCount() != null ? right.getSaveCount() : 0L);
 
                 int scoreCompare = Long.compare(rightScore, leftScore);
@@ -179,8 +199,16 @@ public class ForumPostService {
      * Get user's posts
      */
     public Page<ForumPostResponse> getUserPosts(UUID userId, Pageable pageable) {
+        User currentUser = null;
+        try {
+            currentUser = userService.getCurrentUser();
+        } catch (Exception ignored) {
+            // Anonymous users can still browse the forum.
+        }
+
+        User finalCurrentUser = currentUser;
         Page<ForumPost> posts = postRepository.findByAuthorIdOrderByCreatedAtDesc(userId, pageable);
-        return posts.map(this::toResponse);
+        return posts.map(post -> toResponse(post, finalCurrentUser));
     }
 
     /**

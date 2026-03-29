@@ -22,7 +22,7 @@ public class CreateForumPostRequest {
     String title;
 
     @NotBlank(message = "Content cannot be blank")
-    @Size(min = 10, max = 5000, message = "Content must be between 10 and 5000 characters")
+    @Size(min = 1, max = 5000, message = "Content must be between 1 and 5000 characters")
     String content;
 
     PostType postType;
