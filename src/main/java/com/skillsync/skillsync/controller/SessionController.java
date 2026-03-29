@@ -1,0 +1,73 @@
+package com.skillsync.skillsync.controller;
+
+import com.skillsync.skillsync.dto.common.ApiResponse;
+import com.skillsync.skillsync.dto.request.session.BookSessionRequest;
+import com.skillsync.skillsync.dto.response.session.SessionResponse;
+import com.skillsync.skillsync.dto.response.session.ZegoTokenResponse;
+import com.skillsync.skillsync.service.SessionService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/sessions")
+@RequiredArgsConstructor
+public class SessionController {
+
+    private final SessionService sessionService;
+
+    /**
+     * POST /api/sessions/book
+     * Learner đặt lịch → tạo Session + videoRoomId, trừ credits.
+     */
+    @PostMapping("/book")
+    public ApiResponse<SessionResponse> book(@RequestBody BookSessionRequest request) {
+        return ApiResponse.success(sessionService.book(request));
+    }
+
+    /**
+     * GET /api/sessions/mine?role=learner|teacher|all&status=SCHEDULED|COMPLETED|CANCELLED
+     * Trả danh sách sessions của user hiện tại.
+     */
+    @GetMapping("/mine")
+    public ApiResponse<List<SessionResponse>> getMySessions(
+            @RequestParam(required = false, defaultValue = "all") String role,
+            @RequestParam(required = false) String status) {
+        return ApiResponse.success(sessionService.getMySessions(role, status));
+    }
+
+    /**
+     * GET /api/sessions/{id}/zego-token
+     * Trả ZEGO token cho teacher hoặc learner của session.
+     * Chỉ cấp trong cửa sổ -10min đến +2h so với giờ học.
+     */
+    @GetMapping("/{id}/zego-token")
+    public ApiResponse<ZegoTokenResponse> getZegoToken(@PathVariable UUID id) {
+        return ApiResponse.success(sessionService.getZegoToken(id));
+    }
+
+    /**
+     * POST /api/sessions/{id}/join
+     * Frontend gọi sau khi ZEGO UIKit đã mount thành công.
+     * Đặt startedAt (chỉ lần đầu).
+     */
+    @PostMapping("/{id}/join")
+    public ApiResponse<Void> join(@PathVariable UUID id) {
+        sessionService.markJoin(id);
+        return ApiResponse.success(null);
+    }
+
+    /**
+     * POST /api/sessions/{id}/leave
+     * Frontend gọi khi user bấm "Kết thúc".
+     * Đặt endedAt + status = COMPLETED.
+     */
+    @PostMapping("/{id}/leave")
+    public ApiResponse<Void> leave(@PathVariable UUID id) {
+
+        sessionService.markLeave(id);
+        return ApiResponse.success(null);
+    }
+}

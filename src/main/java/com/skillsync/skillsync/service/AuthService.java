@@ -1,5 +1,6 @@
 package com.skillsync.skillsync.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.auth.openidconnect.IdToken.Payload;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
@@ -14,17 +15,22 @@ import com.skillsync.skillsync.exception.AppException;
 import com.skillsync.skillsync.exception.ErrorCode;
 import com.skillsync.skillsync.mapper.UserMapper;
 import com.skillsync.skillsync.repository.UserRepository;
-
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-
-import java.util.Collections;
-
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import lombok.extern.slf4j.Slf4j;
+
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -35,9 +41,13 @@ public class AuthService {
     final UserMapper userMapper;
     final UserRepository userRepository;
     final PasswordEncoder passwordEncoder;
+    final ObjectMapper objectMapper;
 
     @Value("${google.client-id:}")
     String googleClientId;
+
+    @Value("${google.client-secret:}")
+    String googleClientSecret;
 
     public AuthenticationResponse register(AuthenticationRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
@@ -47,6 +57,12 @@ public class AuthService {
         User user = userMapper.toUser(request);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(Role.USER);
+
+        // Set display name: use provided fullName, else derive from email
+        String fullName = (request.getFullName() != null && !request.getFullName().isBlank())
+                ? request.getFullName().trim()
+                : request.getEmail().split("@")[0];
+        user.setFullName(fullName);
 
         userRepository.save(user);
         return buildAuth(user);
@@ -73,7 +89,7 @@ public class AuthService {
         return buildAuth(user);
     }
 
-    public AuthenticationResponse googleLogin(String idToken) {
+    private AuthenticationResponse googleLogin(String idToken) {
         String raw = idToken == null ? "" : idToken.trim();
         if (raw.isBlank()) {
             throw new AppException(ErrorCode.INVALID_GOOGLE_TOKEN);
@@ -114,8 +130,11 @@ public class AuthService {
             User user = userRepository.findByEmail(email)
                     .orElseGet(() -> {
                         User newUser = new User();
+                        newUser.setFullName((String) payload.get("name"));
                         newUser.setEmail(email);
-                        newUser.setPassword("");
+                        // Random password for Google-only users — hasPassword=false so FE can prompt them to set one
+                        newUser.setPassword(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+                        newUser.setHasPassword(false);
                         newUser.setRole(Role.USER);
                         log.info("New user created from Google login: {}", email);
                         return userRepository.save(newUser);
@@ -133,6 +152,54 @@ public class AuthService {
         }
     }
 
+    public AuthenticationResponse googleExchangeCode(String code, String redirectUri) {
+        String codeValue = code == null ? "" : code.trim();
+        String redirectUriValue = redirectUri == null ? "" : redirectUri.trim();
+        if (codeValue.isBlank() || redirectUriValue.isBlank()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+        if (googleClientId == null || googleClientId.isBlank() || googleClientSecret == null || googleClientSecret.isBlank()) {
+            log.error("Google OAuth config is missing (client-id/client-secret)");
+            throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+
+        try {
+            String body = "code=" + enc(codeValue)
+                    + "&client_id=" + enc(googleClientId)
+                    + "&client_secret=" + enc(googleClientSecret)
+                    + "&redirect_uri=" + enc(redirectUriValue)
+                    + "&grant_type=authorization_code";
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://oauth2.googleapis.com/token"))
+                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .POST(HttpRequest.BodyPublishers.ofString(body))
+                    .build();
+
+            HttpResponse<String> response = HttpClient.newHttpClient()
+                    .send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                log.warn("Google token exchange failed: status={}, body={}", response.statusCode(), response.body());
+                throw new AppException(ErrorCode.INVALID_GOOGLE_TOKEN);
+            }
+
+            Map<String, Object> payload = objectMapper.readValue(response.body(), Map.class);
+            Object idTokenObj = payload.get("id_token");
+            if (!(idTokenObj instanceof String idToken) || idToken.isBlank()) {
+                log.warn("Google token exchange response missing id_token");
+                throw new AppException(ErrorCode.INVALID_GOOGLE_TOKEN);
+            }
+
+            return googleLogin(idToken);
+        } catch (AppException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error during Google auth code exchange", e);
+            throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     private static boolean looksLikeJwt(String token) {
         String[] parts = token.split("\\.");
         return parts.length == 3
@@ -141,13 +208,21 @@ public class AuthService {
                 && !parts[2].isBlank();
     }
 
+    private static String enc(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
+    }
+
     AuthenticationResponse buildAuth(User user) {
         return AuthenticationResponse.builder()
                 .accessToken(jwtService.generateAccessToken(user))
                 .refreshToken(jwtService.generateRefreshToken(user))
                 .userId(user.getId() != null ? user.getId().toString() : null)
                 .email(user.getEmail())
+                .fullName(user.getFullName())
                 .role(user.getRole().name())
+                .avatarUrl(user.getAvatarUrl())
+                .hasPassword(user.getHasPassword() != null ? user.getHasPassword() : true)
+                .creditsBalance(user.getCreditsBalance())
                 .build();
     }
 }

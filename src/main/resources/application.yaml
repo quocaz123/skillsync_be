@@ -21,7 +21,7 @@ spring:
         "[jdbc.lob.non_contextual_creation]": true
 
 jwt:
-  secret: ${JWT_SECRET}
+  secret: ${JWT_SECRET:}
 
 app:
   cookie:
@@ -31,3 +31,16 @@ app:
 google:
   client-id: ${GOOGLE_CLIENT_ID}
   client-secret: ${GOOGLE_CLIENT_SECRET}
+
+aws:
+  access-key: ${AWS_ACCESS_KEY}
+  secret-key: ${AWS_SECRET_KEY}
+  region: ${AWS_REGION:ap-southeast-1}
+  s3:
+    bucket-name: ${AWS_S3_BUCKET}
+    public-base-url: ${AWS_S3_PUBLIC_URL}
+
+# ── ZEGO Video Call ─────────────────────────────────────
+zego:
+  app-id: ${ZEGO_APP_ID:1922651206}
+  server-secret: ${ZEGO_SERVER_SECRET:7121aee3e285a02ad297b991ba904795}
