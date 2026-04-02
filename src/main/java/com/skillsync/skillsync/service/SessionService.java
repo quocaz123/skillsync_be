@@ -125,11 +125,13 @@ public class SessionService {
 
     // ── Admin Escrow Management ─────────────────────────────
     public List<SessionResponse> getEscrowSessions() {
-        // Lấy tất cả các session đang giữ tiền (KHÔNG PHẢI CANCELLED VÀ CHƯA CÓ EARN_SESSION / REFUND)
-        // MVP: Lấy các session đang ở trạng thái SCHEDULED, IN_PROGRESS, COMPLETED, DISPUTED
+        // Lấy tất cả các session đang giữ tiền (KHÔNG PHẢI CANCELLED VÀ CHƯA CÓ
+        // EARN_SESSION / REFUND)
+        // MVP: Lấy các session đang ở trạng thái SCHEDULED, IN_PROGRESS, COMPLETED,
+        // DISPUTED
         List<Session> escrowSessions = sessionRepository.findByStatusInOrderByCreatedAtDesc(
-                List.of(SessionStatus.SCHEDULED, SessionStatus.IN_PROGRESS, SessionStatus.COMPLETED, SessionStatus.DISPUTED)
-        );
+                List.of(SessionStatus.SCHEDULED, SessionStatus.IN_PROGRESS, SessionStatus.COMPLETED,
+                        SessionStatus.DISPUTED));
         return escrowSessions.stream().map(this::toResponse).toList();
     }
 
@@ -244,11 +246,14 @@ public class SessionService {
         }
 
         // Check if already paid
-        boolean alreadyPaid = transactionRepository.existsByReferenceIdAndTransactionType(sessionId, TransactionType.EARN_SESSION);
-        if (alreadyPaid) return;
+        boolean alreadyPaid = transactionRepository.existsByReferenceIdAndTransactionType(sessionId,
+                TransactionType.EARN_SESSION);
+        if (alreadyPaid)
+            return;
 
         User teacher = session.getTeacher();
-        teacher.setCreditsBalance((teacher.getCreditsBalance() != null ? teacher.getCreditsBalance() : 0) + session.getCreditCost());
+        teacher.setCreditsBalance(
+                (teacher.getCreditsBalance() != null ? teacher.getCreditsBalance() : 0) + session.getCreditCost());
         userRepository.save(teacher);
 
         CreditTransaction tx = CreditTransaction.builder()
@@ -273,7 +278,8 @@ public class SessionService {
 
         // Refund the learner
         User learner = session.getLearner();
-        learner.setCreditsBalance((learner.getCreditsBalance() != null ? learner.getCreditsBalance() : 0) + session.getCreditCost());
+        learner.setCreditsBalance(
+                (learner.getCreditsBalance() != null ? learner.getCreditsBalance() : 0) + session.getCreditCost());
         userRepository.save(learner);
 
         CreditTransaction tx = CreditTransaction.builder()
@@ -300,7 +306,8 @@ public class SessionService {
 
         // Pay the teacher
         User teacher = session.getTeacher();
-        teacher.setCreditsBalance((teacher.getCreditsBalance() != null ? teacher.getCreditsBalance() : 0) + session.getCreditCost());
+        teacher.setCreditsBalance(
+                (teacher.getCreditsBalance() != null ? teacher.getCreditsBalance() : 0) + session.getCreditCost());
         userRepository.save(teacher);
 
         CreditTransaction tx = CreditTransaction.builder()
@@ -308,7 +315,8 @@ public class SessionService {
                 .amount(session.getCreditCost())
                 .transactionType(TransactionType.EARN_SESSION)
                 .referenceId(session.getId())
-                .description("Released funds for disputed session " + session.getVideoRoomId() + ". Notes: " + adminNotes)
+                .description(
+                        "Released funds for disputed session " + session.getVideoRoomId() + ". Notes: " + adminNotes)
                 .build();
         transactionRepository.save(tx);
 

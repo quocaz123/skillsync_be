@@ -39,8 +39,10 @@ public class ZegoTokenService {
     }
 
     /**
-     * Generate a ZEGO Token04 using AES-256-GCM or AES-128-GCM depending on secret length.
-     * Supports both 32-char (16 bytes for AES-128) and 64-char (32 bytes for AES-256) hex secrets.
+     * Generate a ZEGO Token04 using AES-256-GCM or AES-128-GCM depending on secret
+     * length.
+     * Supports both 32-char (16 bytes for AES-128) and 64-char (32 bytes for
+     * AES-256) hex secrets.
      *
      * @param roomId   ZEGO room ID (= session.videoRoomId)
      * @param userId   string user ID
@@ -53,8 +55,8 @@ public class ZegoTokenService {
                     "zego.server-secret is not configured properly. Set environment variable ZEGO_SERVER_SECRET (32 or 64 hex chars from console.zegocloud.com)");
             throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
-        if (serverSecret.equals("00000000000000000000000000000000") 
-            || serverSecret.equals("0000000000000000000000000000000000000000000000000000000000000000")) {
+        if (serverSecret.equals("00000000000000000000000000000000")
+                || serverSecret.equals("0000000000000000000000000000000000000000000000000000000000000000")) {
             log.error(
                     "zego.server-secret is still using dummy value. Please set ZEGO_SERVER_SECRET environment variable from console.zegocloud.com");
             throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
@@ -100,7 +102,7 @@ public class ZegoTokenService {
             // [22-23] encrypted_len(uint16)
             // [24+] encrypted_data + auth_tag
             // [last] mode_byte(0x01 for GCM)
-            
+
             int totalSize = 8 + 2 + NONCE_LENGTH + 2 + encryptedPayload.length + 1;
             ByteBuffer buf = ByteBuffer.allocate(totalSize);
             buf.order(ByteOrder.BIG_ENDIAN);
