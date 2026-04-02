@@ -118,4 +118,52 @@ public class UserService {
         user.setHasPassword(true);
         return buildFullResponse(userRepository.save(user));
     }
+
+    // ─── Admin API ───────────────────────────────────────────────────────────
+
+    public List<com.skillsync.skillsync.dto.response.admin.AdminUserResponse> getAllUsersForAdmin() {
+        return userRepository.findAll().stream()
+                .map(u -> com.skillsync.skillsync.dto.response.admin.AdminUserResponse.builder()
+                        .id(u.getId())
+                        .email(u.getEmail())
+                        .fullName(u.getFullName())
+                        .avatarUrl(u.getAvatarUrl())
+                        .status(u.getStatus())
+                        .role(u.getRole())
+                        .creditsBalance(u.getCreditsBalance())
+                        .trustScore(u.getTrustScore())
+                        .createdAt(u.getCreatedAt())
+                        .build()
+                ).sorted((u1, u2) -> u2.getCreatedAt().compareTo(u1.getCreatedAt()))
+                .collect(Collectors.toList());
+    }
+
+    public com.skillsync.skillsync.dto.response.admin.AdminUserResponse toggleUserBanStatus(java.util.UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getRole() == com.skillsync.skillsync.enums.Role.ADMIN) {
+            throw new RuntimeException("Cannot ban an administrator.");
+        }
+
+        if (user.getStatus() == com.skillsync.skillsync.enums.UserStatus.BANNED) {
+            user.setStatus(com.skillsync.skillsync.enums.UserStatus.ACTIVE);
+        } else {
+            user.setStatus(com.skillsync.skillsync.enums.UserStatus.BANNED);
+        }
+
+        userRepository.save(user);
+
+        return com.skillsync.skillsync.dto.response.admin.AdminUserResponse.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .avatarUrl(user.getAvatarUrl())
+                .status(user.getStatus())
+                .role(user.getRole())
+                .creditsBalance(user.getCreditsBalance())
+                .trustScore(user.getTrustScore())
+                .createdAt(user.getCreatedAt())
+                .build();
+    }
 }

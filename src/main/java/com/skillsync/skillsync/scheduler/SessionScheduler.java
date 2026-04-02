@@ -60,4 +60,39 @@ public class SessionScheduler {
             log.info("Auto-confirmed {} sessions to transfer credits to mentors.", count);
         }
     }
+
+    /**
+     * Executes every 30 minutes. 
+     * Finds SCHEDULED or IN_PROGRESS sessions whose slot time has already passed by more than 2 hours.
+     * Marks them as COMPLETED automatically to prevent them from being stuck forever 
+     * if users closed the browser without clicking "Kết thúc".
+     */
+    @Scheduled(cron = "0 0/30 * * * *")
+    @Transactional
+    public void autoCompleteStaleSessions() {
+        LocalDateTime threshold = LocalDateTime.now().minusHours(2);
+        
+        // Find sessions that are not completed/canceled and their slot end date-time is older than 2 hours ago
+        // To do this, we need to compare session.slot.slotDate and session.slot.slotTime.
+        // Assuming slot.slotDate and slot.slotTime exist.
+        List<Session> staleSessions = sessionRepository.findAll().stream()
+                .filter(s -> (s.getStatus() == SessionStatus.SCHEDULED || s.getStatus() == SessionStatus.IN_PROGRESS) && s.getSlot() != null)
+                .filter(s -> {
+                    LocalDateTime endDateTime = s.getSlot().getSlotDate().atTime(s.getSlot().getSlotTime()).plusMinutes(60);
+                    return endDateTime.isBefore(threshold);
+                })
+                .toList();
+
+        int count = 0;
+        for (Session session : staleSessions) {
+            session.setStatus(SessionStatus.COMPLETED);
+            session.setEndedAt(LocalDateTime.now());
+            sessionRepository.save(session);
+            count++;
+        }
+
+        if (count > 0) {
+            log.info("Auto-completed {} stale sessions that were stuck in IN_PROGRESS/SCHEDULED.", count);
+        }
+    }
 }

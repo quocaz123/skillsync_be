@@ -40,4 +40,8 @@ public class SessionResponse {
     private LocalDateTime startedAt;
     private LocalDateTime endedAt;
     private LocalDateTime createdAt;
+    
+    // Review info
+    private Integer rating;
+    private String review;
 }

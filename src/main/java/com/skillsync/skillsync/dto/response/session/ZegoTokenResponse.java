@@ -11,4 +11,5 @@ public class ZegoTokenResponse {
     private String roomId;
     private String userId;
     private String userName;
+    private int expireSeconds;
 }

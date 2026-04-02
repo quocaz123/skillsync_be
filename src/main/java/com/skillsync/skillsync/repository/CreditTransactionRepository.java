@@ -10,4 +10,5 @@ import java.util.UUID;
 @Repository
 public interface CreditTransactionRepository extends JpaRepository<CreditTransaction, UUID> {
     List<CreditTransaction> findAllByUserIdOrderByCreatedAtDesc(UUID userId);
+    boolean existsByReferenceIdAndTransactionType(UUID referenceId, com.skillsync.skillsync.enums.TransactionType type);
 }

@@ -10,6 +10,9 @@ import com.skillsync.skillsync.enums.SessionStatus;
 import com.skillsync.skillsync.enums.SlotStatus;
 import com.skillsync.skillsync.exception.AppException;
 import com.skillsync.skillsync.exception.ErrorCode;
+import com.skillsync.skillsync.entity.CreditTransaction;
+import com.skillsync.skillsync.enums.TransactionType;
+import com.skillsync.skillsync.repository.CreditTransactionRepository;
 import com.skillsync.skillsync.repository.SessionRepository;
 import com.skillsync.skillsync.repository.TeachingSlotRepository;
 import com.skillsync.skillsync.repository.UserRepository;
@@ -34,6 +37,7 @@ public class SessionService {
     private final UserRepository userRepository;
     private final UserService userService;
     private final ZegoTokenService zegoTokenService;
+    private final CreditTransactionRepository transactionRepository;
 
     // ── Book ────────────────────────────────────────────────
     @Transactional
@@ -76,7 +80,18 @@ public class SessionService {
                 .learnerNotes(request.getLearnerNotes())
                 .build();
 
-        return toResponse(sessionRepository.save(session));
+        session = sessionRepository.save(session);
+
+        CreditTransaction tx = CreditTransaction.builder()
+                .user(learner)
+                .amount(cost)
+                .transactionType(TransactionType.SPEND_SESSION)
+                .referenceId(session.getId())
+                .description("Paid for session " + session.getVideoRoomId())
+                .build();
+        transactionRepository.save(tx);
+
+        return toResponse(session);
     }
 
     // ── Mine ────────────────────────────────────────────────
@@ -106,6 +121,16 @@ public class SessionService {
         }
 
         return sessions.stream().map(this::toResponse).toList();
+    }
+
+    // ── Admin Escrow Management ─────────────────────────────
+    public List<SessionResponse> getEscrowSessions() {
+        // Lấy tất cả các session đang giữ tiền (KHÔNG PHẢI CANCELLED VÀ CHƯA CÓ EARN_SESSION / REFUND)
+        // MVP: Lấy các session đang ở trạng thái SCHEDULED, IN_PROGRESS, COMPLETED, DISPUTED
+        List<Session> escrowSessions = sessionRepository.findByStatusInOrderByCreatedAtDesc(
+                List.of(SessionStatus.SCHEDULED, SessionStatus.IN_PROGRESS, SessionStatus.COMPLETED, SessionStatus.DISPUTED)
+        );
+        return escrowSessions.stream().map(this::toResponse).toList();
     }
 
     // ── ZEGO Token (get token + optional mark join) ─────────
@@ -155,8 +180,7 @@ public class SessionService {
         String token = zegoTokenService.generateToken(
                 session.getVideoRoomId(),
                 user.getId().toString(),
-                user.getFullName() != null ? user.getFullName() : "User",
-                expireSeconds);
+                user.getFullName() != null ? user.getFullName() : "User");
 
         return ZegoTokenResponse.builder()
                 .token(token)
@@ -164,6 +188,7 @@ public class SessionService {
                 .roomId(session.getVideoRoomId())
                 .userId(user.getId().toString())
                 .userName(user.getFullName() != null ? user.getFullName() : "User")
+                .expireSeconds(expireSeconds)
                 .build();
     }
 
@@ -204,8 +229,108 @@ public class SessionService {
         sessionRepository.save(session);
     }
 
+    // ── Confirm Session (Release Funds to Teacher) ──────────
+    @Transactional
+    public void confirmSession(UUID sessionId) {
+        User user = userService.getCurrentUser();
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND));
+
+        if (!session.getLearner().getId().equals(user.getId())) {
+            throw new AppException(ErrorCode.FORBIDDEN);
+        }
+        if (session.getStatus() != SessionStatus.COMPLETED) {
+            throw new AppException(ErrorCode.INVALID_REQUEST); // Only COMPLETED sessions can be confirmed
+        }
+
+        // Check if already paid
+        boolean alreadyPaid = transactionRepository.existsByReferenceIdAndTransactionType(sessionId, TransactionType.EARN_SESSION);
+        if (alreadyPaid) return;
+
+        User teacher = session.getTeacher();
+        teacher.setCreditsBalance((teacher.getCreditsBalance() != null ? teacher.getCreditsBalance() : 0) + session.getCreditCost());
+        userRepository.save(teacher);
+
+        CreditTransaction tx = CreditTransaction.builder()
+                .user(teacher)
+                .amount(session.getCreditCost())
+                .transactionType(TransactionType.EARN_SESSION)
+                .referenceId(session.getId())
+                .description("Earned from session " + session.getVideoRoomId())
+                .build();
+        transactionRepository.save(tx);
+    }
+
+    // ── Admin Escrow Management ─────────────────────────────
+    @Transactional
+    public void resolveDisputeRefundLearner(UUID sessionId, String adminNotes) {
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND));
+
+        if (session.getStatus() != SessionStatus.DISPUTED) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        // Refund the learner
+        User learner = session.getLearner();
+        learner.setCreditsBalance((learner.getCreditsBalance() != null ? learner.getCreditsBalance() : 0) + session.getCreditCost());
+        userRepository.save(learner);
+
+        CreditTransaction tx = CreditTransaction.builder()
+                .user(learner)
+                .amount(session.getCreditCost())
+                .transactionType(TransactionType.REFUND)
+                .referenceId(session.getId())
+                .description("Refund for disputed session " + session.getVideoRoomId() + ". Notes: " + adminNotes)
+                .build();
+        transactionRepository.save(tx);
+
+        session.setStatus(SessionStatus.CANCELLED);
+        sessionRepository.save(session);
+    }
+
+    @Transactional
+    public void resolveDisputeReleaseToMentor(UUID sessionId, String adminNotes) {
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND));
+
+        if (session.getStatus() != SessionStatus.DISPUTED) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        // Pay the teacher
+        User teacher = session.getTeacher();
+        teacher.setCreditsBalance((teacher.getCreditsBalance() != null ? teacher.getCreditsBalance() : 0) + session.getCreditCost());
+        userRepository.save(teacher);
+
+        CreditTransaction tx = CreditTransaction.builder()
+                .user(teacher)
+                .amount(session.getCreditCost())
+                .transactionType(TransactionType.EARN_SESSION)
+                .referenceId(session.getId())
+                .description("Released funds for disputed session " + session.getVideoRoomId() + ". Notes: " + adminNotes)
+                .build();
+        transactionRepository.save(tx);
+
+        session.setStatus(SessionStatus.COMPLETED);
+        sessionRepository.save(session);
+    }
+
     // ── Map ─────────────────────────────────────────────────
     private SessionResponse toResponse(Session s) {
+        // Extract review (if rating exists)
+        Integer rating = null;
+        String reviewText = null;
+        if (s.getReviews() != null && !s.getReviews().isEmpty()) {
+            // Priority: Get review from learner
+            var learnerReview = s.getReviews().stream()
+                    .filter(r -> r.getReviewer().getId().equals(s.getLearner().getId()))
+                    .findFirst()
+                    .orElse(s.getReviews().get(0));
+            rating = learnerReview.getRating();
+            reviewText = learnerReview.getComment();
+        }
+
         return SessionResponse.builder()
                 .id(s.getId())
                 .videoRoomId(s.getVideoRoomId())
@@ -226,6 +351,8 @@ public class SessionService {
                 .startedAt(s.getStartedAt())
                 .endedAt(s.getEndedAt())
                 .createdAt(s.getCreatedAt())
+                .rating(rating)
+                .review(reviewText)
                 .build();
     }
 

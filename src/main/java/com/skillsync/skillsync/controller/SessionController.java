@@ -66,8 +66,17 @@ public class SessionController {
      */
     @PostMapping("/{id}/leave")
     public ApiResponse<Void> leave(@PathVariable UUID id) {
-
         sessionService.markLeave(id);
+        return ApiResponse.success(null);
+    }
+
+    /**
+     * POST /api/sessions/{id}/confirm
+     * Learner xác nhận hoàn thành buổi học, giải phóng tiền cho Teacher.
+     */
+    @PostMapping("/{id}/confirm")
+    public ApiResponse<Void> confirm(@PathVariable UUID id) {
+        sessionService.confirmSession(id);
         return ApiResponse.success(null);
     }
 }

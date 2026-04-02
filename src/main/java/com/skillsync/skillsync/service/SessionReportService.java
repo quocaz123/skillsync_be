@@ -76,6 +76,10 @@ public class SessionReportService {
         return reportRepository.findByStatusOrderByCreatedAtDesc(ReportStatus.PENDING);
     }
 
+    public List<SessionReport> getAllReports() {
+        return reportRepository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
+    }
+
     @Transactional
     public SessionReport resolveReport(UUID reportId, ReportStatus resolution, String adminNotes) {
         User admin = userService.getCurrentUser(); // Assume protected by Admin Role
@@ -138,5 +142,13 @@ public class SessionReportService {
         report.setResolvedAt(LocalDateTime.now());
         
         return reportRepository.save(report);
+    }
+
+    public SessionReport getReportBySessionId(UUID sessionId) {
+        List<SessionReport> reports = reportRepository.findBySessionId(sessionId);
+        if (reports.isEmpty()) {
+            throw new AppException(ErrorCode.NOT_FOUND);
+        }
+        return reports.get(0); // Return the first/latest report
     }
 }

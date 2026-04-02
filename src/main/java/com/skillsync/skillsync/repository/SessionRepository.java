@@ -24,9 +24,13 @@ public interface SessionRepository extends JpaRepository<Session, UUID> {
     List<Session> findByLearnerIdAndStatusOrderByCreatedAtDesc(UUID learnerId, SessionStatus status);
     List<Session> findByTeacherIdAndStatusOrderByCreatedAtDesc(UUID teacherId, SessionStatus status);
 
+    List<Session> findByStatusInOrderByCreatedAtDesc(List<SessionStatus> statuses);
+
     // Check if slot is already booked
     boolean existsBySlotId(UUID slotId);
 
     Optional<Session> findByIdAndLearnerId(UUID id, UUID learnerId);
     Optional<Session> findByIdAndTeacherId(UUID id, UUID teacherId);
+
+    List<Session> findByStatusAndEndedAtBefore(SessionStatus status, java.time.LocalDateTime time);
 }

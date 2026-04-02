@@ -1,11 +1,14 @@
 package com.skillsync.skillsync.controller;
 
+import com.skillsync.skillsync.dto.common.ApiResponse;
 import com.skillsync.skillsync.dto.request.review.ReviewRequest;
-import com.skillsync.skillsync.dto.response.ApiResponse;
+import com.skillsync.skillsync.dto.response.review.ReviewResponse;
 import com.skillsync.skillsync.service.ReviewService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/reviews")
@@ -16,15 +19,11 @@ public class ReviewController {
     @PostMapping
     public ApiResponse<Void> createReview(@RequestBody @Valid ReviewRequest request) {
         reviewService.createReview(request);
-        return ApiResponse.<Void>builder()
-                .message("Review submitted successfully")
-                .build();
+        return ApiResponse.success(null);
     }
 
     @GetMapping("/user/{id}")
-    public ApiResponse<java.util.List<com.skillsync.skillsync.dto.response.review.ReviewResponse>> getReviewsByUser(@PathVariable java.util.UUID id) {
-        return ApiResponse.<java.util.List<com.skillsync.skillsync.dto.response.review.ReviewResponse>>builder()
-                .result(reviewService.getReviewsByReviewee(id))
-                .build();
+    public ApiResponse<List<ReviewResponse>> getReviewsByUser(@PathVariable java.util.UUID id) {
+        return ApiResponse.success(reviewService.getReviewsByReviewee(id));
     }
 }
