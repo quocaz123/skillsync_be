@@ -12,10 +12,8 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(
-        name = "user_teaching_skills",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "skill_id", "level"})
-)
+@Table(name = "user_teaching_skills", uniqueConstraints = @UniqueConstraint(columnNames = { "user_id", "skill_id",
+        "level" }))
 @Getter
 @Setter
 @NoArgsConstructor
