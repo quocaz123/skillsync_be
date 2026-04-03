@@ -30,6 +30,8 @@ public class UserResponse {
 
     // ─── Gamification ────────────────────────────────────────
     Integer creditsBalance;
+    Integer pendingLearnerCredits;
+    Integer pendingTeacherCredits;
     Integer trustScore;
 
     // ─── Statistics (aggregated) ─────────────────────────────

@@ -31,7 +31,7 @@ public class UserTeachingSkill {
     @JoinColumn(name = "user_id", nullable = false)
     User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "skill_id", nullable = false)
     Skill skill;
 
@@ -44,6 +44,9 @@ public class UserTeachingSkill {
 
     @Column(name = "outcome_desc", columnDefinition = "TEXT", nullable = false)
     String outcomeDesc;
+
+    @Column(name = "teaching_style", columnDefinition = "TEXT")
+    String teachingStyle;
 
     @Builder.Default
     @Column(name = "credits_per_hour", nullable = false)

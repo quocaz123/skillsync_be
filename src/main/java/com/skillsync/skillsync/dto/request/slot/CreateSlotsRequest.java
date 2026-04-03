@@ -9,8 +9,17 @@ import java.util.UUID;
 @Data
 public class CreateSlotsRequest {
     private UUID teachingSkillId;
-    // Batch: nhiều ngày + nhiều giờ → tạo tất cả tổ hợp
-    private List<LocalDate> dates;
-    private List<LocalTime> times;
-    private List<LocalTime> endTimes; // optional, map 1-1 với times
+
+    /**
+     * Danh sách slot từng cái — mỗi slot có ngày, giờ bắt đầu, giờ kết thúc, và số credits riêng.
+     */
+    private List<SlotEntry> slots;
+
+    @Data
+    public static class SlotEntry {
+        private LocalDate date;
+        private LocalTime time;
+        private LocalTime endTime;    // optional
+        private Integer creditCost;  // số credits học viên cần trả cho slot này
+    }
 }

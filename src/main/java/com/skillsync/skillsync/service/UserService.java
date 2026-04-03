@@ -54,6 +54,9 @@ public class UserService {
                         .build())
                 .collect(Collectors.toList());
 
+        Integer pendingLearner = sessionRepository.getLearnerPendingCredits(id);
+        Integer pendingTeacher = sessionRepository.getTeacherPendingCredits(id);
+
         return UserResponse.builder()
                 // identity
                 .id(user.getId())
@@ -68,6 +71,8 @@ public class UserService {
                 .updatedAt(user.getUpdatedAt())
                 // gamification
                 .creditsBalance(user.getCreditsBalance())
+                .pendingLearnerCredits(pendingLearner)
+                .pendingTeacherCredits(pendingTeacher)
                 .trustScore(user.getTrustScore())
                 // stats
                 .totalTeachingSessions(teachingSessions)

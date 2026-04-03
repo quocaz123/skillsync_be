@@ -28,7 +28,7 @@ public class TeachingSlot {
     @JoinColumn(name = "teacher_id")
     User teacher;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "teaching_skill_id")
     UserTeachingSkill teachingSkill;
 
@@ -40,6 +40,9 @@ public class TeachingSlot {
 
     @Column(name = "slot_end_time")
     LocalTime slotEndTime;
+
+    @Column(name = "credit_cost")
+    Integer creditCost;
 
     @Builder.Default
     @Enumerated(EnumType.STRING)

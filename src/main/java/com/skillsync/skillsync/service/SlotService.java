@@ -15,8 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -60,22 +59,19 @@ public class SlotService {
         }
 
         List<TeachingSlot> toSave = new ArrayList<>();
-        for (LocalDate date : request.getDates()) {
-            for (int ti = 0; ti < request.getTimes().size(); ti++) {
-                LocalTime time = request.getTimes().get(ti);
-                LocalTime endTime = (request.getEndTimes() != null && ti < request.getEndTimes().size())
-                        ? request.getEndTimes().get(ti) : null;
-                // Bỏ qua nếu đã tồn tại
-                if (!slotRepository.existsByTeachingSkillIdAndSlotDateAndSlotTime(skill.getId(), date, time)) {
-                    toSave.add(TeachingSlot.builder()
-                            .teacher(teacher)
-                            .teachingSkill(skill)
-                            .slotDate(date)
-                            .slotTime(time)
-                            .slotEndTime(endTime)
-                            .status(SlotStatus.OPEN)
-                            .build());
-                }
+        for (CreateSlotsRequest.SlotEntry entry : request.getSlots()) {
+            // Bỏ qua nếu đã tồn tại slot cùng ngày + giờ
+            if (!slotRepository.existsByTeachingSkillIdAndSlotDateAndSlotTime(
+                    skill.getId(), entry.getDate(), entry.getTime())) {
+                toSave.add(TeachingSlot.builder()
+                        .teacher(teacher)
+                        .teachingSkill(skill)
+                        .slotDate(entry.getDate())
+                        .slotTime(entry.getTime())
+                        .slotEndTime(entry.getEndTime())
+                        .creditCost(entry.getCreditCost())
+                        .status(SlotStatus.OPEN)
+                        .build());
             }
         }
 
@@ -91,10 +87,10 @@ public class SlotService {
                 .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND));
 
         User teacher = userService.getCurrentUser();
-        if (!slot.getTeacher().getId().equals(teacher.getId())) {
+        if (slot.getTeacher().getId().equals(teacher.getId()) == false) {
             throw new AppException(ErrorCode.FORBIDDEN);
         }
-        if (slot.getStatus() == SlotStatus.BOOKED || sessionRepository.existsBySlotId(slotId)) {
+        if (slot.getStatus() == SlotStatus.BOOKED || sessionRepository.existsBySlotIdAndStatusNot(slotId, com.skillsync.skillsync.enums.SessionStatus.CANCELLED)) {
             throw new AppException(ErrorCode.SLOT_ALREADY_BOOKED);
         }
         slotRepository.delete(slot);
@@ -108,6 +104,7 @@ public class SlotService {
                 .slotDate(s.getSlotDate())
                 .slotTime(s.getSlotTime())
                 .slotEndTime(s.getSlotEndTime())
+                .creditCost(s.getCreditCost())
                 .status(s.getStatus())
                 .build();
     }

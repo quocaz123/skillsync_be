@@ -20,7 +20,9 @@ public enum ErrorCode {
     INSUFFICIENT_CREDITS(402, "Insufficient credits balance", HttpStatus.PAYMENT_REQUIRED),
     TOO_EARLY_TO_JOIN(400, "Session has not started yet (join 10 mins before)", HttpStatus.BAD_REQUEST),
     SESSION_EXPIRED(400, "Session join window has expired", HttpStatus.BAD_REQUEST),
-    SKILL_NOT_FOUND(404, "Teaching skill not found", HttpStatus.NOT_FOUND)
+    SKILL_NOT_FOUND(404, "Teaching skill not found", HttpStatus.NOT_FOUND),
+    SESSION_ALREADY_DECIDED(409, "Session has already been approved or rejected", HttpStatus.CONFLICT),
+    NOT_SESSION_TEACHER(403, "You are not the teacher of this session", HttpStatus.FORBIDDEN)
     ;
 
     private final int code;

@@ -16,5 +16,6 @@ public class CreateTeachingSkillRequest {
     SkillLevel level;
     String experienceDesc;
     String outcomeDesc;
+    String teachingStyle;
     Integer creditsPerHour;
 }

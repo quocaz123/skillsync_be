@@ -62,6 +62,13 @@ public class Session {
     @Column(name = "ended_at")
     LocalDateTime endedAt;
 
+    // Per-participant leave timestamps (used to decide when session is truly over)
+    @Column(name = "teacher_left_at")
+    LocalDateTime teacherLeftAt;
+
+    @Column(name = "learner_left_at")
+    LocalDateTime learnerLeftAt;
+
     @Column(name = "learner_notes", columnDefinition = "TEXT")
     String learnerNotes;
 

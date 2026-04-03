@@ -16,6 +16,8 @@ import com.skillsync.skillsync.repository.CreditTransactionRepository;
 import com.skillsync.skillsync.repository.SessionRepository;
 import com.skillsync.skillsync.repository.TeachingSlotRepository;
 import com.skillsync.skillsync.repository.UserRepository;
+import com.skillsync.skillsync.dto.request.notification.NotificationCreateRequest;
+import com.skillsync.skillsync.enums.NotificationType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -38,8 +40,9 @@ public class SessionService {
     private final UserService userService;
     private final ZegoTokenService zegoTokenService;
     private final CreditTransactionRepository transactionRepository;
+    private final NotificationService notificationService;
 
-    // ── Book ────────────────────────────────────────────────
+    // ── Book (Request) ──────────────────────────────────────
     @Transactional
     public SessionResponse book(BookSessionRequest request) {
         User learner = userService.getCurrentUser();
@@ -47,33 +50,26 @@ public class SessionService {
         TeachingSlot slot = slotRepository.findById(request.getSlotId())
                 .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND));
 
-        if (slot.getStatus() != SlotStatus.OPEN) {
+        if (slot.getStatus() == SlotStatus.BOOKED) {
             throw new AppException(ErrorCode.SLOT_ALREADY_BOOKED);
         }
         if (slot.getTeacher().getId().equals(learner.getId())) {
             throw new AppException(ErrorCode.FORBIDDEN); // teacher không tự book slot mình
         }
 
-        // Trừ credits learner
-        int cost = slot.getTeachingSkill().getCreditsPerHour();
+        int cost = slot.getCreditCost() != null ? slot.getCreditCost() : slot.getTeachingSkill().getCreditsPerHour();
         if (learner.getCreditsBalance() == null || learner.getCreditsBalance() < cost) {
             throw new AppException(ErrorCode.INSUFFICIENT_CREDITS);
         }
-        learner.setCreditsBalance(learner.getCreditsBalance() - cost);
-        userRepository.save(learner);
 
-        // Đổi slot thành BOOKED
-        slot.setStatus(SlotStatus.BOOKED);
-        slotRepository.save(slot);
-
-        // Tạo session với videoRoomId có prefix
+        // Tạo session với trạng thái PENDING_APPROVAL, chưa trừ credits
         String videoRoomId = "skillsync_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
         Session session = Session.builder()
                 .learner(learner)
                 .teacher(slot.getTeacher())
                 .slot(slot)
                 .teachingSkill(slot.getTeachingSkill())
-                .status(SessionStatus.SCHEDULED)
+                .status(SessionStatus.PENDING_APPROVAL)
                 .creditCost(cost)
                 .videoRoomId(videoRoomId)
                 .videoProvider("ZEGO")
@@ -82,6 +78,45 @@ public class SessionService {
 
         session = sessionRepository.save(session);
 
+        // Thông báo cho Mentor
+        notificationService.createAndSend(NotificationCreateRequest.builder()
+                .userId(slot.getTeacher().getId())
+                .type(NotificationType.SESSION_BOOKED)
+                .title("Yêu cầu đặt lịch mới")
+                .content(learner.getFullName() + " muốn đặt lịch học kỹ năng " + slot.getTeachingSkill().getSkill().getName() + ".")
+                .entityId(session.getId())
+                .redirectUrl("/app/teaching")
+                .build());
+
+        return toResponse(session);
+    }
+
+    // ── Approve/Reject ──────────────────────────────────────
+    @Transactional
+    public SessionResponse approveSession(UUID sessionId) {
+        User teacher = userService.getCurrentUser();
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND));
+
+        if (!session.getTeacher().getId().equals(teacher.getId())) {
+            throw new AppException(ErrorCode.NOT_SESSION_TEACHER);
+        }
+        if (session.getStatus() != SessionStatus.PENDING_APPROVAL) {
+            throw new AppException(ErrorCode.SESSION_ALREADY_DECIDED);
+        }
+
+        User learner = session.getLearner();
+        int cost = session.getCreditCost();
+
+        if (learner.getCreditsBalance() == null || learner.getCreditsBalance() < cost) {
+            throw new AppException(ErrorCode.INSUFFICIENT_CREDITS);
+        }
+
+        // Trừ credits
+        learner.setCreditsBalance(learner.getCreditsBalance() - cost);
+        userRepository.save(learner);
+
+        // Lưu transaction
         CreditTransaction tx = CreditTransaction.builder()
                 .user(learner)
                 .amount(cost)
@@ -91,8 +126,73 @@ public class SessionService {
                 .build();
         transactionRepository.save(tx);
 
+        // Chuyển session -> SCHEDULED
+        session.setStatus(SessionStatus.SCHEDULED);
+        sessionRepository.save(session);
+
+        // Chuyển slot -> BOOKED
+        TeachingSlot slot = session.getSlot();
+        slot.setStatus(SlotStatus.BOOKED);
+        slotRepository.save(slot);
+
+        // Huỷ các PENDING khác
+        List<Session> otherPending = sessionRepository.findBySlotIdAndStatus(slot.getId(), SessionStatus.PENDING_APPROVAL);
+        for (Session pendingSession : otherPending) {
+            if (!pendingSession.getId().equals(session.getId())) {
+                pendingSession.setStatus(SessionStatus.CANCELLED);
+                sessionRepository.save(pendingSession);
+
+                notificationService.createAndSend(NotificationCreateRequest.builder()
+                        .userId(pendingSession.getLearner().getId())
+                        .type(NotificationType.SESSION_CANCELLED)
+                        .title("Lịch học không khả dụng")
+                        .content("Mentor đã nhận học viên khác cho slot này.")
+                        .entityId(pendingSession.getId())
+                        .redirectUrl("/app/sessions")
+                        .build());
+            }
+        }
+
+        // Thông báo Learner được duyệt
+        notificationService.createAndSend(NotificationCreateRequest.builder()
+                .userId(learner.getId())
+                .type(NotificationType.SESSION_APPROVED)
+                .title("Lịch học được chấp nhận")
+                .content(teacher.getFullName() + " đã đồng ý dạy. Credits đã bị trừ.")
+                .entityId(session.getId())
+                .redirectUrl("/app/sessions")
+                .build());
+
         return toResponse(session);
     }
+
+    @Transactional
+    public void rejectSession(UUID sessionId) {
+        User teacher = userService.getCurrentUser();
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND));
+
+        if (!session.getTeacher().getId().equals(teacher.getId())) {
+            throw new AppException(ErrorCode.NOT_SESSION_TEACHER);
+        }
+        if (session.getStatus() != SessionStatus.PENDING_APPROVAL) {
+            throw new AppException(ErrorCode.SESSION_ALREADY_DECIDED);
+        }
+
+        session.setStatus(SessionStatus.CANCELLED);
+        sessionRepository.save(session);
+
+        // Thông báo Learner bị từ chối
+        notificationService.createAndSend(NotificationCreateRequest.builder()
+                .userId(session.getLearner().getId())
+                .type(NotificationType.SESSION_REJECTED)
+                .title("Lịch học bị từ chối")
+                .content(teacher.getFullName() + " đã từ chối yêu cầu của bạn.")
+                .entityId(session.getId())
+                .redirectUrl("/app/sessions")
+                .build());
+    }
+
 
     // ── Mine ────────────────────────────────────────────────
     public List<SessionResponse> getMySessions(String role, String status) {
@@ -210,8 +310,14 @@ public class SessionService {
         // join)
         if (session.getStartedAt() == null) {
             session.setStartedAt(LocalDateTime.now());
-            sessionRepository.save(session);
         }
+        
+        // Chuyển sang đang diễn ra khi có người vào
+        if (session.getStatus() == SessionStatus.SCHEDULED) {
+            session.setStatus(SessionStatus.IN_PROGRESS);
+        }
+        
+        sessionRepository.save(session);
     }
 
     // ── Leave (mark endedAt) ────────────────────────────────
@@ -226,8 +332,24 @@ public class SessionService {
         if (!isParticipant)
             throw new AppException(ErrorCode.FORBIDDEN);
 
-        session.setEndedAt(LocalDateTime.now());
-        session.setStatus(SessionStatus.COMPLETED);
+        // Ghi nhận thời gian leave của từng người
+        boolean isTeacher = session.getTeacher().getId().equals(user.getId());
+        if (isTeacher) {
+            session.setTeacherLeftAt(LocalDateTime.now());
+        } else {
+            session.setLearnerLeftAt(LocalDateTime.now());
+        }
+
+        boolean bothLeft = session.getTeacherLeftAt() != null && session.getLearnerLeftAt() != null;
+        boolean ranLongEnough = session.getStartedAt() != null
+                && java.time.Duration.between(session.getStartedAt(), LocalDateTime.now()).toMinutes() >= 2;
+
+        // Chỉ kết thúc session nếu cả hai cùng thoát hoặc một bên thoát sau khi phòng chạy đủ lâu
+        if (bothLeft || (ranLongEnough && (session.getTeacherLeftAt() != null || session.getLearnerLeftAt() != null))) {
+            session.setEndedAt(LocalDateTime.now());
+            session.setStatus(SessionStatus.COMPLETED);
+        }
+
         sessionRepository.save(session);
     }
 

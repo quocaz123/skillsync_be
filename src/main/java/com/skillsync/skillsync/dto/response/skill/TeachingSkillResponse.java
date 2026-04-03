@@ -23,6 +23,7 @@ public class TeachingSkillResponse {
     SkillLevel level;
     String experienceDesc;
     String outcomeDesc;
+    String teachingStyle;
     Integer creditsPerHour;
     VerificationStatus verificationStatus;
     

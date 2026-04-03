@@ -16,5 +16,6 @@ public class SlotResponse {
     private LocalDate slotDate;
     private LocalTime slotTime;
     private LocalTime slotEndTime;
+    private Integer creditCost;
     private SlotStatus status;
 }

@@ -63,6 +63,7 @@ public class UserTeachingSkillService {
                 .level(request.getLevel())
                 .experienceDesc(request.getExperienceDesc())
                 .outcomeDesc(request.getOutcomeDesc())
+                .teachingStyle(request.getTeachingStyle())
                 .creditsPerHour(request.getCreditsPerHour() != null ? request.getCreditsPerHour() : 12)
                 .build());
 
@@ -99,6 +100,7 @@ public class UserTeachingSkillService {
                 .level(ts.getLevel())
                 .experienceDesc(ts.getExperienceDesc())
                 .outcomeDesc(ts.getOutcomeDesc())
+                .teachingStyle(ts.getTeachingStyle())
                 .creditsPerHour(ts.getCreditsPerHour())
                 .verificationStatus(ts.getVerificationStatus())
                 .teacherId(ts.getUser().getId())

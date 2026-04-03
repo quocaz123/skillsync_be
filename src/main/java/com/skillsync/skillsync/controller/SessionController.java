@@ -20,11 +20,30 @@ public class SessionController {
 
     /**
      * POST /api/sessions/book
-     * Learner đặt lịch → tạo Session + videoRoomId, trừ credits.
+     * Learner đặt lịch → tạo Session + videoRoomId (PENDING_APPROVAL), chưa trừ credits.
      */
     @PostMapping("/book")
     public ApiResponse<SessionResponse> book(@RequestBody BookSessionRequest request) {
         return ApiResponse.success(sessionService.book(request));
+    }
+
+    /**
+     * POST /api/sessions/{id}/approve
+     * Teacher duyệt lịch → duyệt, trừ credits, tạo transaction, huỷ các PENDING khác
+     */
+    @PostMapping("/{id}/approve")
+    public ApiResponse<SessionResponse> approveSession(@PathVariable UUID id) {
+        return ApiResponse.success(sessionService.approveSession(id));
+    }
+
+    /**
+     * POST /api/sessions/{id}/reject
+     * Teacher từ chối lịch → huỷ
+     */
+    @PostMapping("/{id}/reject")
+    public ApiResponse<Void> rejectSession(@PathVariable UUID id) {
+        sessionService.rejectSession(id);
+        return ApiResponse.success(null);
     }
 
     /**

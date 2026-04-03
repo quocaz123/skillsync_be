@@ -26,11 +26,20 @@ public interface SessionRepository extends JpaRepository<Session, UUID> {
 
     List<Session> findByStatusInOrderByCreatedAtDesc(List<SessionStatus> statuses);
 
-    // Check if slot is already booked
-    boolean existsBySlotId(UUID slotId);
+    // Check if slot is already booked (used for booking constraint)
+    boolean existsBySlotIdAndStatusNot(UUID slotId, SessionStatus status);
 
     Optional<Session> findByIdAndLearnerId(UUID id, UUID learnerId);
     Optional<Session> findByIdAndTeacherId(UUID id, UUID teacherId);
 
     List<Session> findByStatusAndEndedAtBefore(SessionStatus status, java.time.LocalDateTime time);
+    
+    // For approval logic
+    List<Session> findBySlotIdAndStatus(UUID slotId, SessionStatus status);
+
+    @Query("SELECT COALESCE(SUM(s.creditCost), 0) FROM Session s WHERE s.learner.id = :userId AND s.status IN ('SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'DISPUTED')")
+    Integer getLearnerPendingCredits(@Param("userId") UUID userId);
+
+    @Query("SELECT COALESCE(SUM(s.creditCost), 0) FROM Session s WHERE s.teacher.id = :userId AND s.status IN ('SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'DISPUTED')")
+    Integer getTeacherPendingCredits(@Param("userId") UUID userId);
 }

@@ -30,6 +30,7 @@ public class SecurityConfiguration {
                                 "/auth/refresh")
                         .permitAll()
                         .requestMatchers("/auth/logout").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/auth/**").authenticated()
                         // Admin only
                         .requestMatchers("/admin/**").hasRole("ADMIN")
