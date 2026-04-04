@@ -5,9 +5,12 @@ import com.skillsync.skillsync.dto.request.upload.UpdateAvatarRequest;
 import com.skillsync.skillsync.dto.request.user.UpdateBioRequest;
 import com.skillsync.skillsync.dto.request.user.UpdatePasswordRequest;
 import com.skillsync.skillsync.dto.response.user.UserResponse;
+import com.skillsync.skillsync.dto.response.user.CreditTransactionResponse;
 import com.skillsync.skillsync.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/users")
@@ -20,6 +23,12 @@ public class UserController {
     @GetMapping("/me")
     public ApiResponse<UserResponse> getMe() {
         return ApiResponse.success(userService.getMe());
+    }
+
+    /** Lấy lịch sử giao dịch credit */
+    @GetMapping("/me/transactions")
+    public ApiResponse<List<CreditTransactionResponse>> getMyTransactions() {
+        return ApiResponse.success(userService.getMyTransactions());
     }
 
     /** Cập nhật avatar */

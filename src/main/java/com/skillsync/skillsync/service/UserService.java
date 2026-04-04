@@ -8,6 +8,7 @@ import com.skillsync.skillsync.dto.response.user.UserResponse;
 import com.skillsync.skillsync.entity.User;
 import com.skillsync.skillsync.entity.UserLearningInterest;
 import com.skillsync.skillsync.repository.*;
+import com.skillsync.skillsync.dto.response.user.CreditTransactionResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,7 @@ public class UserService {
     private final ReviewRepository reviewRepository;
     private final UserLearningInterestRepository learningInterestRepository;
     private final UserTeachingSkillRepository userTeachingSkillRepository;
+    private final CreditTransactionRepository creditTransactionRepository;
     private final PasswordEncoder passwordEncoder;
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -84,6 +86,20 @@ public class UserService {
 
     public UserResponse getMe() {
         return buildFullResponse(getCurrentUser());
+    }
+
+    public List<CreditTransactionResponse> getMyTransactions() {
+        User user = getCurrentUser();
+        return creditTransactionRepository.findAllByUserIdOrderByCreatedAtDesc(user.getId())
+                .stream()
+                .map(tx -> CreditTransactionResponse.builder()
+                        .id(tx.getId().toString())
+                        .amount(tx.getAmount())
+                        .transactionType(tx.getTransactionType())
+                        .description(tx.getDescription())
+                        .createdAt(tx.getCreatedAt())
+                        .build())
+                .collect(Collectors.toList());
     }
 
     public UserResponse updateAvatar(UpdateAvatarRequest request) {
