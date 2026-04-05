@@ -16,4 +16,5 @@ public class UserAuthResponse {
     private String role;
     private String avatarUrl;
     private Boolean hasPassword;
+    private Boolean isFirstLogin;
 }

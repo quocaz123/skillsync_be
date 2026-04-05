@@ -21,4 +21,6 @@ public class AuthenticationResponse {
     private String avatarUrl;
     private Boolean hasPassword;
     private Integer creditsBalance;
+    /** true khi đây là lần đăng nhập thành công đầu tiên (email/Google), không áp dụng cho refresh token. */
+    private Boolean isFirstLogin;
 }

@@ -73,4 +73,8 @@ public class User {
     @UpdateTimestamp
     @Column(name = "updated_at")
     LocalDateTime updatedAt;
+
+    /** Thời điểm đăng nhập thành công lần đầu (null = chưa từng đăng nhập). Đăng ký không tính là đăng nhập. */
+    @Column(name = "first_login_at")
+    LocalDateTime firstLoginAt;
 }

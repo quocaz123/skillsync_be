@@ -1,9 +1,14 @@
+# SkillSync API base: http://localhost:8080/skillsync — giữ port/context này cho khớp frontend.
+# (8081 + /notification là kiểu service khác, không dùng ở đây.)
 server:
   port: 8080
   servlet:
     context-path: /skillsync
 
 spring:
+  config:
+    import: optional:classpath:application-local.yaml
+
   datasource:
     url: ${DB_URL}
     username: ${DB_USER}
@@ -20,6 +25,40 @@ spring:
         "[format_sql]": false
         "[jdbc.lob.non_contextual_creation]": true
 
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+
+  # Gmail SMTP — mật khẩu: biến MAIL_PASSWORD hoặc application-local.yaml (không ghi mật khẩu vào file commit)
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:skillsynccskh@gmail.com}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    consumer:
+      group-id: notification-group-v2
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+        spring.json.use.type.headers: false
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      ack-mode: record
+
 jwt:
   secret: ${JWT_SECRET:}
 
@@ -27,6 +66,8 @@ app:
   cookie:
     secure: false
     same-site: Lax
+  mail:
+    welcome-subject: ${MAIL_WELCOME_SUBJECT:Chào mừng bạn đến với SkillSync}
 
 google:
   client-id: ${GOOGLE_CLIENT_ID}

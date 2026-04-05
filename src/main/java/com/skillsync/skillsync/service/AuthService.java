@@ -29,6 +29,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Map;
 
@@ -42,6 +43,7 @@ public class AuthService {
     final UserRepository userRepository;
     final PasswordEncoder passwordEncoder;
     final ObjectMapper objectMapper;
+    final WelcomeEmailService welcomeEmailService;
 
     @Value("${google.client-id:}")
     String googleClientId;
@@ -65,7 +67,7 @@ public class AuthService {
         user.setFullName(fullName);
 
         userRepository.save(user);
-        return buildAuth(user);
+        return buildAuth(user, false);
     }
 
     public AuthenticationResponse login(LoginRequest request) {
@@ -76,7 +78,14 @@ public class AuthService {
             throw new AppException(ErrorCode.INVALID_CREDENTIALS);
         }
 
-        return buildAuth(user);
+        boolean isFirstLogin = user.getFirstLoginAt() == null;
+        if (isFirstLogin) {
+            user.setFirstLoginAt(LocalDateTime.now());
+            userRepository.save(user);
+            welcomeEmailService.sendFirstLoginWelcome(user);
+        }
+
+        return buildAuth(user, isFirstLogin);
     }
 
     public AuthenticationResponse refresh(String refreshToken) {
@@ -86,7 +95,7 @@ public class AuthService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        return buildAuth(user);
+        return buildAuth(user, false);
     }
 
     private AuthenticationResponse googleLogin(String idToken) {
@@ -140,7 +149,14 @@ public class AuthService {
                         return userRepository.save(newUser);
                     });
 
-            return buildAuth(user);
+            boolean isFirstLogin = user.getFirstLoginAt() == null;
+            if (isFirstLogin) {
+                user.setFirstLoginAt(LocalDateTime.now());
+                userRepository.save(user);
+                welcomeEmailService.sendFirstLoginWelcome(user);
+            }
+
+            return buildAuth(user, isFirstLogin);
         } catch (AppException e) {
             throw e;
         } catch (IllegalArgumentException e) {
@@ -213,6 +229,10 @@ public class AuthService {
     }
 
     AuthenticationResponse buildAuth(User user) {
+        return buildAuth(user, false);
+    }
+
+    AuthenticationResponse buildAuth(User user, boolean isFirstLogin) {
         return AuthenticationResponse.builder()
                 .accessToken(jwtService.generateAccessToken(user))
                 .refreshToken(jwtService.generateRefreshToken(user))
@@ -223,6 +243,7 @@ public class AuthService {
                 .avatarUrl(user.getAvatarUrl())
                 .hasPassword(user.getHasPassword() != null ? user.getHasPassword() : true)
                 .creditsBalance(user.getCreditsBalance())
+                .isFirstLogin(isFirstLogin)
                 .build();
     }
 }

@@ -102,6 +102,7 @@ public class AuthController {
                 .role(auth.getRole())
                 .avatarUrl(auth.getAvatarUrl())
                 .hasPassword(auth.getHasPassword())
+                .isFirstLogin(auth.getIsFirstLogin())
                 .build();
     }
 }
