@@ -4,44 +4,35 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "forum_comments")
+@Table(
+        name = "post_saves",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"post_id", "user_id"})
+)
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class ForumComment {
+public class PostSave {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "post_id")
+    @JoinColumn(name = "post_id", nullable = false)
     ForumPost post;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "author_id")
-    User author;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parent_comment_id")
-    ForumComment parentComment;
-
-    @Column(nullable = false, columnDefinition = "TEXT")
-    String content;
+    @JoinColumn(name = "user_id", nullable = false)
+    User user;
 
     @CreationTimestamp
     @Column(name = "created_at")
     LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at")
-    LocalDateTime updatedAt;
 }

@@ -4,11 +4,16 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.skillsync.skillsync.entity.Skill;
 import com.skillsync.skillsync.entity.User;
+import com.skillsync.skillsync.entity.ForumCategory;
+import com.skillsync.skillsync.entity.ForumPost;
 import com.skillsync.skillsync.enums.Role;
+import com.skillsync.skillsync.enums.ForumPostStatus;
 import com.skillsync.skillsync.enums.SkillCategory;
 import com.skillsync.skillsync.entity.CreditMission;
 import com.skillsync.skillsync.enums.MissionType;
 import com.skillsync.skillsync.repository.CreditMissionRepository;
+import com.skillsync.skillsync.repository.ForumCategoryRepository;
+import com.skillsync.skillsync.repository.ForumPostRepository;
 import com.skillsync.skillsync.repository.SkillRepository;
 import com.skillsync.skillsync.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +36,8 @@ public class DataInitializer implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final SkillRepository skillRepository;
     private final CreditMissionRepository creditMissionRepository;
+    private final ForumCategoryRepository forumCategoryRepository;
+    private final ForumPostRepository forumPostRepository;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -38,6 +45,8 @@ public class DataInitializer implements CommandLineRunner {
         seedUser("admin@skillsync.com", "Admin@123", Role.ADMIN);
         seedUser("user@skillsync.com",  "User@123",  Role.USER);
         seedSkills();
+        seedForumCategories();
+        backfillForumPostStatuses();
         seedMissions();
     }
 
@@ -92,6 +101,83 @@ public class DataInitializer implements CommandLineRunner {
 
         } catch (Exception e) {
             log.error("Failed to seed skills from seeds/skills.json: {}", e.getMessage());
+        }
+    }
+
+    // ─── Forum Categories ───────────────────────────────────────────────────
+
+    private void seedForumCategories() {
+        List<ForumCategory> defaultCategories = List.of(
+                ForumCategory.builder().name("Mẹo học tập").description("Chia sẻ mẹo, kinh nghiệm và cách học hiệu quả").icon("💡").displayOrder(1).build(),
+                ForumCategory.builder().name("Gợi ý giáo viên").description("Đề xuất và tìm kiếm giáo viên phù hợp").icon("⭐").displayOrder(2).build(),
+                ForumCategory.builder().name("Tài nguyên").description("Chia sẻ tài liệu, roadmap và nguồn học tập").icon("📚").displayOrder(3).build(),
+                ForumCategory.builder().name("Hỏi đáp").description("Đặt câu hỏi và thảo luận cùng cộng đồng").icon("❓").displayOrder(4).build(),
+                ForumCategory.builder().name("Chia sẻ").description("Chia sẻ câu chuyện, kết quả và trải nghiệm học tập").icon("💬").displayOrder(5).build()
+        );
+
+        List<ForumCategory> existingCategories = forumCategoryRepository.findAllByOrderByDisplayOrderAsc();
+        int updated = 0;
+
+        for (ForumCategory defaultCategory : defaultCategories) {
+            ForumCategory target = existingCategories.stream()
+                    .filter(category -> category.getDisplayOrder() != null
+                            && category.getDisplayOrder().equals(defaultCategory.getDisplayOrder()))
+                    .findFirst()
+                    .orElseGet(() -> forumCategoryRepository.findByNameIgnoreCase(defaultCategory.getName()).orElse(null));
+
+            if (target == null) {
+                forumCategoryRepository.save(defaultCategory);
+                updated++;
+                continue;
+            }
+
+            boolean changed = false;
+            if (!defaultCategory.getName().equals(target.getName())) {
+                target.setName(defaultCategory.getName());
+                changed = true;
+            }
+            if (!defaultCategory.getDescription().equals(target.getDescription())) {
+                target.setDescription(defaultCategory.getDescription());
+                changed = true;
+            }
+            if (!defaultCategory.getIcon().equals(target.getIcon())) {
+                target.setIcon(defaultCategory.getIcon());
+                changed = true;
+            }
+            if (!defaultCategory.getDisplayOrder().equals(target.getDisplayOrder())) {
+                target.setDisplayOrder(defaultCategory.getDisplayOrder());
+                changed = true;
+            }
+
+            if (changed) {
+                forumCategoryRepository.save(target);
+                updated++;
+            }
+        }
+
+        if (updated > 0) {
+            log.info("✅ Synchronized {} forum categories", updated);
+        } else {
+            log.info("⏩ Forum categories already synchronized");
+        }
+    }
+
+    private void backfillForumPostStatuses() {
+        try {
+            List<ForumPost> posts = forumPostRepository.findAll();
+            long updated = 0;
+            for (ForumPost post : posts) {
+                if (post.getStatus() == null) {
+                    post.setStatus(ForumPostStatus.APPROVED);
+                    updated++;
+                }
+            }
+            if (updated > 0) {
+                forumPostRepository.saveAll(posts);
+                log.info("✅ Backfilled {} forum posts to APPROVED", updated);
+            }
+        } catch (Exception e) {
+            log.warn("Could not backfill forum post statuses: {}", e.getMessage());
         }
     }
 

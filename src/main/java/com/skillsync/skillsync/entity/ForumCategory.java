@@ -10,32 +10,30 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "forum_comments")
+@Table(name = "forum_categories")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class ForumComment {
+public class ForumCategory {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "post_id")
-    ForumPost post;
+    @Column(nullable = false, unique = true, length = 100)
+    String name;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "author_id")
-    User author;
+    @Column(length = 500)
+    String description;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parent_comment_id")
-    ForumComment parentComment;
+    @Column(length = 50)
+    String icon;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
-    String content;
+    @Builder.Default
+    @Column(name = "display_order")
+    Integer displayOrder = 0;
 
     @CreationTimestamp
     @Column(name = "created_at")
