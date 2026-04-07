@@ -1,4 +1,4 @@
-package com.skillsync.skillsync.service;
+package com.skillsync.skillsync.notification.email;
 
 import com.skillsync.skillsync.entity.User;
 import lombok.AccessLevel;
@@ -63,3 +63,4 @@ public class WelcomeEmailService {
                 + "—\nSkillSync";
     }
 }
+

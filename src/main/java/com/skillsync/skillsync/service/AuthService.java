@@ -14,6 +14,7 @@ import com.skillsync.skillsync.enums.Role;
 import com.skillsync.skillsync.exception.AppException;
 import com.skillsync.skillsync.exception.ErrorCode;
 import com.skillsync.skillsync.mapper.UserMapper;
+import com.skillsync.skillsync.notification.email.WelcomeEmailService;
 import com.skillsync.skillsync.repository.UserRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
