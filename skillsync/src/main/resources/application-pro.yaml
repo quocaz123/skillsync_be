@@ -1,0 +1,34 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /skillsync
+
+spring:
+  profiles:
+    active: pro
+    
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASS}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        "[format_sql]": false
+        "[jdbc.lob.non_contextual_creation]": true
+
+jwt:
+  # Nếu không set JWT_SECRET thì dùng chuỗi rỗng để server không crash khi dev.
+  # JwtService sẽ tự tạo secret tạm thời (không dùng cho production).
+  secret: ${JWT_SECRET:}
+
+app:
+  cookie:
+    secure: true
+    same-site: Strict

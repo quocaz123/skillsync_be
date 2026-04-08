@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chào mừng đến với SkillSync!</title>
+    <style>
+        /* Reset */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #0f0f1a; color: #e2e8f0; }
+
+        /* Wrapper */
+        .email-wrapper {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #0f0f1a;
+            padding: 24px 16px;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+            border-radius: 20px 20px 0 0;
+            padding: 48px 40px;
+            text-align: center;
+        }
+        .header-logo {
+            font-size: 28px;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+        }
+        .header-logo span {
+            color: #c4b5fd;
+        }
+        .header-emoji {
+            font-size: 64px;
+            display: block;
+            margin-bottom: 16px;
+        }
+        .header-title {
+            font-size: 26px;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1.3;
+        }
+        .header-subtitle {
+            color: #c4b5fd;
+            font-size: 15px;
+            margin-top: 8px;
+        }
+
+        /* Body */
+        .body {
+            background-color: #1a1a2e;
+            padding: 40px;
+        }
+        .greeting {
+            font-size: 18px;
+            color: #e2e8f0;
+            margin-bottom: 16px;
+        }
+        .greeting strong { color: #a78bfa; }
+
+        .intro-text {
+            color: #94a3b8;
+            font-size: 15px;
+            line-height: 1.7;
+            margin-bottom: 32px;
+        }
+
+        /* Feature cards */
+        .features-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #c4b5fd;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 16px;
+        }
+
+        .feature-card {
+            display: flex;
+            align-items: flex-start;
+            background-color: #16213e;
+            border: 1px solid #2d2d4e;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .feature-icon {
+            font-size: 28px;
+            margin-right: 16px;
+            flex-shrink: 0;
+        }
+        .feature-content h4 {
+            color: #e2e8f0;
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .feature-content p {
+            color: #64748b;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        /* CTA */
+        .cta-section {
+            text-align: center;
+            margin: 36px 0;
+        }
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 16px 40px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.4);
+        }
+
+        /* Credits badge */
+        .credits-badge {
+            background: linear-gradient(135deg, #1e3a5f, #1a2a4a);
+            border: 1px solid #2563eb;
+            border-radius: 12px;
+            padding: 20px 24px;
+            text-align: center;
+            margin: 28px 0;
+        }
+        .credits-badge .icon { font-size: 32px; margin-bottom: 8px; }
+        .credits-badge .amount {
+            font-size: 36px;
+            font-weight: 800;
+            color: #60a5fa;
+        }
+        .credits-badge .label {
+            color: #94a3b8;
+            font-size: 13px;
+            margin-top: 4px;
+        }
+
+        /* Divider */
+        .divider {
+            border: none;
+            border-top: 1px solid #2d2d4e;
+            margin: 28px 0;
+        }
+
+        /* Footer */
+        .footer {
+            background-color: #0f0f1a;
+            border-radius: 0 0 20px 20px;
+            padding: 28px 40px;
+            text-align: center;
+            border-top: 1px solid #2d2d4e;
+        }
+        .footer-text {
+            color: #475569;
+            font-size: 12px;
+            line-height: 1.7;
+        }
+        .footer-links {
+            margin-top: 12px;
+        }
+        .footer-links a {
+            color: #6366f1;
+            text-decoration: none;
+            font-size: 12px;
+            margin: 0 8px;
+        }
+    </style>
+</head>
+<body>
+<div class="email-wrapper">
+
+    <!-- Header -->
+    <div class="header">
+        <div class="header-logo">Skill<span>Sync</span></div>
+        <span class="header-emoji">🚀</span>
+        <div class="header-title">Chào mừng bạn đến với SkillSync!</div>
+        <div class="header-subtitle">Nền tảng học và dạy kỹ năng peer-to-peer</div>
+    </div>
+
+    <!-- Body -->
+    <div class="body">
+
+        <p class="greeting">Xin chào, <strong th:text="${recipientName}">Người dùng</strong>! 👋</p>
+
+        <p class="intro-text">
+            Tài khoản SkillSync của bạn đã được tạo thành công.
+            Bạn đang bước vào một cộng đồng nơi mọi người kết nối để chia sẻ và học hỏi kỹ năng thực tế từ nhau.
+        </p>
+
+        <!-- Starter Credits -->
+        <div class="credits-badge">
+            <div class="icon">💎</div>
+            <div class="amount">50</div>
+            <div class="label">Credits khởi đầu miễn phí đã được thêm vào tài khoản của bạn!</div>
+        </div>
+
+        <!-- Features -->
+        <div class="features-title">✨ Bạn có thể làm gì?</div>
+
+        <div class="feature-card">
+            <div class="feature-icon">🔍</div>
+            <div class="feature-content">
+                <h4>Tìm kiếm Mentor</h4>
+                <p>Khám phá hàng trăm mentor được xác minh với đa dạng kỹ năng từ lập trình đến thiết kế.</p>
+            </div>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon">📅</div>
+            <div class="feature-content">
+                <h4>Đặt lịch học linh hoạt</h4>
+                <p>Chọn thời gian phù hợp, đặt lịch học 1-on-1 trực tiếp và học qua video call.</p>
+            </div>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon">🏆</div>
+            <div class="feature-content">
+                <h4>Dạy kỹ năng — Kiếm Credits</h4>
+                <p>Đăng ký trở thành Mentor, chia sẻ kiến thức và nhận Credits từ mỗi buổi dạy.</p>
+            </div>
+        </div>
+
+        <!-- CTA -->
+        <div class="cta-section">
+            <a th:href="${exploreUrl}" class="cta-button">
+                🌟 Khám phá ngay
+            </a>
+        </div>
+
+        <hr class="divider">
+
+        <p class="intro-text" style="text-align: center; font-size: 13px;">
+            Nếu bạn có bất kỳ câu hỏi nào, hãy liên hệ với chúng tôi qua email này.<br>
+            Chúng tôi luôn sẵn sàng hỗ trợ bạn!
+        </p>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p class="footer-text">
+            Email này được gửi đến <span th:text="${recipientEmail}">user@example.com</span><br>
+            vì bạn vừa tạo tài khoản SkillSync.
+        </p>
+        <div class="footer-links">
+            <a th:href="${frontendUrl}">Trang chủ</a>
+            <a th:href="${profileUrl}">Hồ sơ của tôi</a>
+            <a href="mailto:skillsynccskh@gmail.com">Liên hệ hỗ trợ</a>
+        </div>
+        <p class="footer-text" style="margin-top: 12px;">
+            © 2026 SkillSync. All rights reserved.
+        </p>
+    </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,18 @@
+package com.skillsync.skillsync.enums;
+
+public enum NotificationType {
+    SESSION_BOOKED,
+    SESSION_APPROVED,
+    SESSION_REJECTED,
+    SESSION_REMINDER,
+    SESSION_CANCELLED,
+    SESSION_COMPLETED,
+
+    CREDIT_EARNED,
+    CREDIT_SPENT,
+
+    SKILL_VERIFIED,
+    SKILL_REJECTED,
+
+    MISSION_REWARDED
+}

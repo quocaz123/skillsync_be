@@ -1,0 +1,29 @@
+# Ignore list cho monorepo
+
+# Thư mục build
+**/target/
+**/build/
+**/out/
+
+# IDE files
+**/.idea/
+**/.vscode/
+**/*.iml
+
+# OS files
+**/.DS_Store
+**/Thumbs.db
+
+# Logs
+**/logs/
+**/*.log
+
+# Tạm thời
+**/tmp/
+**/.tmp/
+**/*~
+
+# Npm (nếu có sau này)
+**/node_modules/
+**/dist/
+
