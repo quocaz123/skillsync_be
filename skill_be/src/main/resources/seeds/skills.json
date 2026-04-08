@@ -1,0 +1,36 @@
+[
+  { "name": "Java", "category": "TECH", "icon": "CoffeeBean" },
+  { "name": "Python", "category": "TECH", "icon": "Snake" },
+  { "name": "JavaScript", "category": "TECH", "icon": "GlobeHemisphereWest" },
+  { "name": "TypeScript", "category": "TECH", "icon": "Diamond" },
+  { "name": "React", "category": "TECH", "icon": "Atom" },
+  { "name": "SQL", "category": "TECH", "icon": "Database" },
+  { "name": "Git", "category": "TECH", "icon": "GitBranch" },
+
+  { "name": "Machine Learning", "category": "DATA", "icon": "Robot" },
+  { "name": "Data Analysis", "category": "DATA", "icon": "ChartBar" },
+  { "name": "Power BI", "category": "DATA", "icon": "TrendingUp" },
+
+  { "name": "UI/UX Design", "category": "DESIGN", "icon": "Palette" },
+  { "name": "Figma", "category": "DESIGN", "icon": "PencilSimple" },
+
+  { "name": "Quản Lý Dự Án", "category": "BUSINESS", "icon": "FolderOpen" },
+  {
+    "name": "Business Analysis",
+    "category": "BUSINESS",
+    "icon": "MagnifyingGlass"
+  },
+
+  { "name": "Digital Marketing", "category": "MARKETING", "icon": "Megaphone" },
+  { "name": "SEO", "category": "MARKETING", "icon": "MagnifyingGlass" },
+
+  {
+    "name": "Tài Chính Cá Nhân",
+    "category": "FINANCE",
+    "icon": "CurrencyDollar"
+  },
+  { "name": "Tiếng Anh", "category": "LANGUAGE", "icon": "Flag" },
+
+  { "name": "Giao Tiếp", "category": "SOFT_SKILL", "icon": "SpeakerHigh" },
+  { "name": "Thuyết Trình", "category": "SOFT_SKILL", "icon": "Microphone" }
+]
