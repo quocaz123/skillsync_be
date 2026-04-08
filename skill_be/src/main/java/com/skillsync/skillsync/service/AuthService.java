@@ -143,7 +143,13 @@ public class AuthService {
                         newUser.setHasPassword(false);
                         newUser.setRole(Role.USER);
                         log.info("New user created from Google login: {}", email);
-                        return userRepository.save(newUser);
+                        User saved = userRepository.save(newUser);
+
+                        // Publish WELCOME email event cho Google-first users (tương tự register())
+                        notificationEventPublisher.publishWelcome(saved.getEmail(), saved.getFullName());
+                        log.info("[AuthService] Published WELCOME event for new Google user: {}", saved.getEmail());
+
+                        return saved;
                     });
 
             return buildAuth(user);

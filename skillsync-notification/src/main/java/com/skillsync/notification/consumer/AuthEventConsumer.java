@@ -2,11 +2,13 @@ package com.skillsync.notification.consumer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.skillsync.notification.dto.event.AuthEvent;
+import com.skillsync.notification.dto.request.TemplateEmailRequest;
 import com.skillsync.notification.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -26,17 +28,11 @@ public class AuthEventConsumer {
     @Value("${app.frontend-url}")
     private String frontendUrl;
 
-    @KafkaListener(
-            topics = "${kafka.topics.auth}",
-            groupId = "${spring.kafka.consumer.group-id}",
-            containerFactory = "kafkaListenerContainerFactory"
-    )
-    public void handleAuthEvent(Object payload) {
+    @KafkaListener(topics = "${kafka.topics.auth}", groupId = "${spring.kafka.consumer.group-id}", containerFactory = "kafkaListenerContainerFactory")
+    public void handleAuthEvent(ConsumerRecord<String, Object> record) {
         try {
+            Object payload = record != null ? record.value() : null;
             AuthEvent event = objectMapper.convertValue(payload, AuthEvent.class);
-
-            log.info("[AuthEventConsumer] Received event: type={}, email={}",
-                    event.getEventType(), event.getRecipientEmail());
 
             if ("WELCOME".equals(event.getEventType())) {
                 handleWelcome(event);
@@ -57,16 +53,13 @@ public class AuthEventConsumer {
                 "recipientEmail", event.getRecipientEmail(),
                 "exploreUrl", frontendUrl + "/explore",
                 "profileUrl", frontendUrl + "/app/profile",
-                "frontendUrl", frontendUrl
-        );
+                "frontendUrl", frontendUrl);
 
-        emailService.sendHtmlEmail(
+        emailService.sendHtmlEmail(new TemplateEmailRequest(
                 event.getRecipientEmail(),
                 "🎉 Chào mừng bạn đến với SkillSync!",
                 "welcome",
-                variables
-        );
+                variables));
 
-        log.info("[AuthEventConsumer] Welcome email sent to {}", event.getRecipientEmail());
     }
 }

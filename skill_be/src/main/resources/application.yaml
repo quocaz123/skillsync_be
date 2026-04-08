@@ -20,6 +20,15 @@ spring:
         "[format_sql]": false
         "[jdbc.lob.non_contextual_creation]": true
 
+  # ── Kafka Producer (Notification Events) ────────────────
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: false
+
 jwt:
   secret: ${JWT_SECRET:}
 
@@ -44,16 +53,6 @@ aws:
 zego:
   app-id: ${ZEGO_APP_ID:1922651206}
   server-secret: ${ZEGO_SERVER_SECRET:7121aee3e285a02ad297b991ba904795}
-
-# ── Kafka Producer (Notification Events) ────────────────
-spring:
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-      properties:
-        spring.json.add.type.headers: false
 
 # ── Notification Kafka Topics ────────────────────────────
 kafka:

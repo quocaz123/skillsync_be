@@ -1,5 +1,6 @@
 package com.skillsync.notification.service;
 
+import com.skillsync.notification.dto.request.TemplateEmailRequest;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,14 +35,17 @@ public class EmailService {
     /**
      * Gửi email HTML được render từ Thymeleaf template.
      *
-     * @param to           Địa chỉ email người nhận
-     * @param subject      Tiêu đề email
-     * @param templateName Tên file template (không có .html, ví dụ: "welcome")
-     * @param variables    Các biến truyền vào template
+     * @param request Request DTO (to/subject/template/variables)
      */
-    public void sendHtmlEmail(String to, String subject, String templateName,
-                               Map<String, Object> variables) {
+    public void sendHtmlEmail(TemplateEmailRequest request) {
         try {
+            if (request == null || request.to() == null || request.to().isBlank()) {
+                log.warn("[EmailService] Skip sending email: missing recipient");
+                return;
+            }
+            String templateName = request.templateName();
+            Map<String, Object> variables = request.variables() != null ? request.variables() : Map.of();
+
             // Render Thymeleaf template → HTML string
             Context context = new Context();
             context.setVariables(variables);
@@ -56,16 +60,16 @@ public class EmailService {
             );
 
             helper.setFrom(senderEmail, senderName);
-            helper.setTo(to);
-            helper.setSubject(subject);
+            helper.setTo(request.to());
+            helper.setSubject(request.subject());
             helper.setText(htmlContent, true); // true = isHtml
 
             mailSender.send(message);
-            log.info("[EmailService] Sent '{}' email to {}", templateName, to);
+            log.info("[EmailService] Sent '{}' email to {}", templateName, request.to());
 
         } catch (Exception e) {
-            log.error("[EmailService] Failed to send '{}' email to {}: {}", templateName, to, e.getMessage(), e);
-            // Không throw exception ra ngoài để tránh crash consumer
+            log.error("[EmailService] Failed to send '{}' email to {}: {}", request != null ? request.templateName() : "?",
+                    request != null ? request.to() : "?", e.getMessage(), e);
         }
     }
 }

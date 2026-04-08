@@ -8,8 +8,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: skillsynccskh@gmail.com
-    password: zcav gjke wgoi ramy
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
     properties:
       mail:
         smtp:
@@ -23,7 +23,7 @@ spring:
 
   # ── Kafka ─────────────────────────────────────────────────────────────────
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
       group-id: skillsync-notification-group
       auto-offset-reset: earliest
@@ -44,9 +44,9 @@ spring:
 # ── App Config ─────────────────────────────────────────────────────────────────
 app:
   mail:
-    sender-name: SkillSync
-    sender-email: skillsynccskh@gmail.com
-  frontend-url: http://localhost:5173
+    sender-name: ${MAIL_SENDER_NAME:SkillSync}
+    sender-email: ${MAIL_SENDER_EMAIL:${MAIL_USERNAME}}
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
 
 # ── Kafka Topics ───────────────────────────────────────────────────────────────
 kafka:

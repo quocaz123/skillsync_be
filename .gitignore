@@ -18,6 +18,11 @@
 **/logs/
 **/*.log
 
+# Environment files (sensitive)
+.env
+.env.local
+.env.*.local
+
 # Tạm thời
 **/tmp/
 **/.tmp/
