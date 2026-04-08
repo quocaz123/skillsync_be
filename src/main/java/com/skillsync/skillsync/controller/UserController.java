@@ -19,6 +19,11 @@ public class UserController {
 
     private final UserService userService;
 
+    @GetMapping
+    public ApiResponse<List<UserResponse>> getAllUsers() {
+        return ApiResponse.success(userService.getAllUsers());
+    }
+
     /** Lấy profile đầy đủ của user hiện tại */
     @GetMapping("/me")
     public ApiResponse<UserResponse> getMe() {

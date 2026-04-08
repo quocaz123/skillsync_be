@@ -134,4 +134,10 @@ public class UserService {
         user.setHasPassword(true);
         return buildFullResponse(userRepository.save(user));
     }
+
+    public List<UserResponse> getAllUsers() {
+        return userRepository.findAll().stream()
+                .map(this::buildFullResponse)
+                .collect(Collectors.toList());
+    }
 }
