@@ -41,6 +41,7 @@ public class SessionService {
     private final ZegoTokenService zegoTokenService;
     private final CreditTransactionRepository transactionRepository;
     private final NotificationService notificationService;
+    private final SystemLogService systemLogService;
 
     // ── Book (Request) ──────────────────────────────────────
     @Transactional
@@ -220,6 +221,23 @@ public class SessionService {
             sessions.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
         }
 
+        return sessions.stream().map(this::toResponse).toList();
+    }
+
+    // ── Admin: All Sessions ─────────────────────────────────
+    public List<SessionResponse> getAllSessionsForAdmin(SessionStatus status) {
+        List<Session> sessions;
+        if (status != null) {
+            sessions = sessionRepository.findByStatusInOrderByCreatedAtDesc(List.of(status));
+        } else {
+            sessions = sessionRepository.findAll().stream()
+                    .sorted((a, b) -> {
+                        if (a.getCreatedAt() == null) return 1;
+                        if (b.getCreatedAt() == null) return -1;
+                        return b.getCreatedAt().compareTo(a.getCreatedAt());
+                    })
+                    .toList();
+        }
         return sessions.stream().map(this::toResponse).toList();
     }
 
@@ -415,6 +433,7 @@ public class SessionService {
 
         session.setStatus(SessionStatus.CANCELLED);
         sessionRepository.save(session);
+        systemLogService.logSystemEvent("Phán xử tranh chấp: Hoàn tiền " + session.getCreditCost() + " Credits cho học viên (" + learner.getEmail() + ") của session: " + session.getVideoRoomId(), com.skillsync.skillsync.enums.LogLevel.INFO);
     }
 
     @Transactional
@@ -444,6 +463,7 @@ public class SessionService {
 
         session.setStatus(SessionStatus.COMPLETED);
         sessionRepository.save(session);
+        systemLogService.logSystemEvent("Phán xử tranh chấp: Trả " + session.getCreditCost() + " Credits cho Mentor (" + teacher.getEmail() + ") của session: " + session.getVideoRoomId(), com.skillsync.skillsync.enums.LogLevel.INFO);
     }
 
     // ── Map ─────────────────────────────────────────────────
