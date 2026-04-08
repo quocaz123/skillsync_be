@@ -108,11 +108,14 @@ public class DataInitializer implements CommandLineRunner {
 
     private void seedForumCategories() {
         List<ForumCategory> defaultCategories = List.of(
-                ForumCategory.builder().name("Mẹo học tập").description("Chia sẻ mẹo, kinh nghiệm và cách học hiệu quả").icon("💡").displayOrder(1).build(),
-                ForumCategory.builder().name("Gợi ý giáo viên").description("Đề xuất và tìm kiếm giáo viên phù hợp").icon("⭐").displayOrder(2).build(),
-                ForumCategory.builder().name("Tài nguyên").description("Chia sẻ tài liệu, roadmap và nguồn học tập").icon("📚").displayOrder(3).build(),
-                ForumCategory.builder().name("Hỏi đáp").description("Đặt câu hỏi và thảo luận cùng cộng đồng").icon("❓").displayOrder(4).build(),
-                ForumCategory.builder().name("Chia sẻ").description("Chia sẻ câu chuyện, kết quả và trải nghiệm học tập").icon("💬").displayOrder(5).build()
+                ForumCategory.builder().name("Mẹo học tập").description("Mẹo, công cụ và phương pháp học hiệu quả.").icon("").displayOrder(1).build(),
+                ForumCategory.builder().name("Gợi ý giáo viên").description("Đề xuất và tìm kiếm giáo viên phù hợp.").icon("").displayOrder(2).build(),
+                ForumCategory.builder().name("Tài nguyên học tập").description("Tài liệu, roadmap và nguồn học tập hữu ích.").icon("").displayOrder(3).build(),
+                ForumCategory.builder().name("Hỏi đáp").description("Đặt câu hỏi và thảo luận cùng cộng đồng.").icon("").displayOrder(4).build(),
+                ForumCategory.builder().name("Chia sẻ kinh nghiệm").description("Chia sẻ câu chuyện, kết quả và trải nghiệm học tập.").icon("").displayOrder(5).build(),
+                ForumCategory.builder().name("Thảo luận chung").description("Trao đổi, góp ý và thảo luận các chủ đề học tập.").icon("").displayOrder(6).build(),
+                ForumCategory.builder().name("Kinh nghiệm học tập").description("Chia sẻ phương pháp và cách học hiệu quả.").icon("").displayOrder(7).build(),
+                ForumCategory.builder().name("Tài liệu tham khảo").description("Chia sẻ tài liệu, link và nguồn học thêm hữu ích.").icon("").displayOrder(8).build()
         );
 
         List<ForumCategory> existingCategories = forumCategoryRepository.findAllByOrderByDisplayOrderAsc();
