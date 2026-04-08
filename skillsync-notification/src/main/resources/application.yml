@@ -1,0 +1,57 @@
+server:
+  port: 8081
+  servlet:
+    context-path: /notification
+
+spring:
+  # ── Mail ────────────────────────────────────────────────────────────────────
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: skillsynccskh@gmail.com
+    password: zcav gjke wgoi ramy
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+  # ── Kafka ─────────────────────────────────────────────────────────────────
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: skillsync-notification-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.skillsync.notification.dto.event"
+        spring.json.use.type.headers: false
+
+  # ── Thymeleaf ───────────────────────────────────────────────────────────────
+  thymeleaf:
+    prefix: classpath:/templates/email/
+    suffix: .html
+    mode: HTML
+    encoding: UTF-8
+    cache: false
+
+# ── App Config ─────────────────────────────────────────────────────────────────
+app:
+  mail:
+    sender-name: SkillSync
+    sender-email: skillsynccskh@gmail.com
+  frontend-url: http://localhost:5173
+
+# ── Kafka Topics ───────────────────────────────────────────────────────────────
+kafka:
+  topics:
+    auth: skillsync.notification.auth
+    session: skillsync.notification.session
+    credit: skillsync.notification.credit
+    skill: skillsync.notification.skill

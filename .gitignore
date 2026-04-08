@@ -1,74 +1,29 @@
-HELP.md
-target/
-.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
+# Ignore list cho monorepo
 
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
+# Thư mục build
+**/target/
+**/build/
+**/out/
 
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
+# IDE files
+**/.idea/
+**/.vscode/
+**/*.iml
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
+# OS files
+**/.DS_Store
+**/Thumbs.db
 
-### VS Code ###
-.vscode/
+# Logs
+**/logs/
+**/*.log
 
-### Environment Files (Sensitive Data) ###
-.env
-.env.local
-.env.*.local
+# Tạm thời
+**/tmp/
+**/.tmp/
+**/*~
 
-### Logs ###
-*.log
-logs/
-*.log.gz
+# Npm (nếu có sau này)
+**/node_modules/
+**/dist/
 
-### Spring Boot ###
-*.jks
-*.p12
-*.pem
-application-local.yaml
-application-dev.yaml
-
-### System Files ###
-.DS_Store
-Thumbs.db
-*.swp
-*.swo
-*~
-
-### Node (if using frontend) ###
-node_modules/
-npm-debug.log
-yarn-error.log
-package-lock.json
-yarn.lock
-
-### Database ###
-*.db
-*.sqlite
-*.sqlite3
-
-### Temp Files ###
-tmp/
-temp/
-*.tmp

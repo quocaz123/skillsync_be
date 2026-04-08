@@ -42,6 +42,7 @@ public class AuthService {
     final UserRepository userRepository;
     final PasswordEncoder passwordEncoder;
     final ObjectMapper objectMapper;
+    final NotificationEventPublisher notificationEventPublisher;
 
     @Value("${google.client-id:}")
     String googleClientId;
@@ -65,6 +66,11 @@ public class AuthService {
         user.setFullName(fullName);
 
         userRepository.save(user);
+
+        // Publish WELCOME email event lên Kafka → skillsync-notification sẽ gửi email
+        notificationEventPublisher.publishWelcome(user.getEmail(), user.getFullName());
+        log.info("[AuthService] Published WELCOME event for new user: {}", user.getEmail());
+
         return buildAuth(user);
     }
 
