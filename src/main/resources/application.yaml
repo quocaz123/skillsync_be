@@ -6,9 +6,6 @@ server:
     context-path: /skillsync
 
 spring:
-  config:
-    import: optional:classpath:application-local.yaml
-
   datasource:
     url: ${DB_URL}
     username: ${DB_USER}
@@ -30,19 +27,6 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
-
-  # Gmail SMTP — mật khẩu: biến MAIL_PASSWORD hoặc application-local.yaml (không ghi mật khẩu vào file commit)
-  mail:
-    host: smtp.gmail.com
-    port: 587
-    username: ${MAIL_USERNAME:skillsynccskh@gmail.com}
-    password: ${MAIL_PASSWORD:}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
@@ -66,8 +50,10 @@ app:
   cookie:
     secure: false
     same-site: Lax
-  mail:
-    welcome-subject: ${MAIL_WELCOME_SUBJECT:Chào mừng bạn đến với SkillSync}
+
+notification:
+  # URL của Notification-Service (jobmate) để gửi email chào mừng khi user đăng nhập lần đầu
+  base-url: ${NOTIFICATION_BASE_URL:http://localhost:8081/notification}
 
 google:
   client-id: ${GOOGLE_CLIENT_ID}

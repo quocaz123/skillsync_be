@@ -14,7 +14,7 @@ import com.skillsync.skillsync.enums.Role;
 import com.skillsync.skillsync.exception.AppException;
 import com.skillsync.skillsync.exception.ErrorCode;
 import com.skillsync.skillsync.mapper.UserMapper;
-import com.skillsync.skillsync.notification.email.WelcomeEmailService;
+import com.skillsync.skillsync.notification.client.NotificationEmailClient;
 import com.skillsync.skillsync.repository.UserRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -44,7 +44,7 @@ public class AuthService {
     final UserRepository userRepository;
     final PasswordEncoder passwordEncoder;
     final ObjectMapper objectMapper;
-    final WelcomeEmailService welcomeEmailService;
+    final NotificationEmailClient notificationEmailClient;
 
     @Value("${google.client-id:}")
     String googleClientId;
@@ -83,7 +83,7 @@ public class AuthService {
         if (isFirstLogin) {
             user.setFirstLoginAt(LocalDateTime.now());
             userRepository.save(user);
-            welcomeEmailService.sendFirstLoginWelcome(user);
+            notificationEmailClient.sendWelcomeFirstLogin(user);
         }
 
         return buildAuth(user, isFirstLogin);
@@ -154,7 +154,7 @@ public class AuthService {
             if (isFirstLogin) {
                 user.setFirstLoginAt(LocalDateTime.now());
                 userRepository.save(user);
-                welcomeEmailService.sendFirstLoginWelcome(user);
+                notificationEmailClient.sendWelcomeFirstLogin(user);
             }
 
             return buildAuth(user, isFirstLogin);
