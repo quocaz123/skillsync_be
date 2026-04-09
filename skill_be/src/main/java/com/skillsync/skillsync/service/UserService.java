@@ -98,7 +98,7 @@ public class UserService {
         return creditTransactionRepository.findAllByUserIdOrderByCreatedAtDesc(user.getId())
                 .stream()
                 .map(tx -> CreditTransactionResponse.builder()
-                        .id(tx.getId().toString())
+                        .id(tx.getId())
                         .amount(tx.getAmount())
                         .transactionType(tx.getTransactionType())
                         .description(tx.getDescription())

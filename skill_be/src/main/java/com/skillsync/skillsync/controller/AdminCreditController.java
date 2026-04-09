@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 public class AdminCreditController {
 
     private final CreditTransactionRepository creditTransactionRepository;
+    private final AdminCreditService adminCreditService;
 
     /**
      * GET /api/admin/credits/transactions?type=SPEND_SESSION
@@ -64,8 +65,9 @@ public class AdminCreditController {
                 .collect(Collectors.toList());
 
         return ApiResponse.success(result);
+    }
 
-    private final AdminCreditService adminCreditService;
+
 
     @GetMapping
     public ResponseEntity<List<AdminTransactionDTO>> getAllTransactions() {
