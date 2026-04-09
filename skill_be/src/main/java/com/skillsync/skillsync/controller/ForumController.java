@@ -1,5 +1,6 @@
 package com.skillsync.skillsync.controller;
 
+import com.skillsync.skillsync.dto.common.PageResponse;
 import com.skillsync.skillsync.dto.request.forum.CreateCategoryRequest;
 import com.skillsync.skillsync.dto.request.forum.CreateCommentRequest;
 import com.skillsync.skillsync.dto.request.forum.CreateForumPostRequest;
@@ -19,7 +20,6 @@ import com.skillsync.skillsync.service.PostSaveService;
 import com.skillsync.skillsync.service.PostVoteService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -55,11 +55,11 @@ public class ForumController {
      * GET /api/forum - List all posts with pagination, filtering, and searching
      */
     @GetMapping
-    public Page<ForumPostResponse> getAllPosts(
+    public PageResponse<ForumPostResponse> getAllPosts(
             @RequestParam(required = false) UUID categoryId,
             @RequestParam(required = false) String search,
             Pageable pageable) {
-        return postService.getAllPosts(categoryId, search, pageable);
+        return PageResponse.from(postService.getAllPosts(categoryId, search, pageable));
     }
 
     /**
@@ -113,10 +113,10 @@ public class ForumController {
      * GET /api/forum/user/{userId} - Get user's posts
      */
     @GetMapping("/user/{userId}")
-    public Page<ForumPostResponse> getUserPosts(
+    public PageResponse<ForumPostResponse> getUserPosts(
             @PathVariable UUID userId,
             Pageable pageable) {
-        return postService.getUserPosts(userId, pageable);
+        return PageResponse.from(postService.getUserPosts(userId, pageable));
     }
 
     // ==================== CATEGORIES ENDPOINTS ====================
@@ -231,8 +231,8 @@ public class ForumController {
      */
     @GetMapping("/saved")
     @PreAuthorize("isAuthenticated()")
-    public Page<ForumPostResponse> getSavedPosts(Pageable pageable) {
-        return saveService.getUserSavedPosts(pageable);
+    public PageResponse<ForumPostResponse> getSavedPosts(Pageable pageable) {
+        return PageResponse.from(saveService.getUserSavedPosts(pageable));
     }
 
     // ==================== INNER CLASS FOR RESPONSE ====================

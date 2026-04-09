@@ -72,4 +72,19 @@ public interface ForumPostRepository extends JpaRepository<ForumPost, UUID> {
     @EntityGraph(attributePaths = {"author", "category", "reviewedBy"})
     @Query("select p from ForumPost p where p.id = :id")
     Optional<ForumPost> findWithDetailsById(@Param("id") UUID id);
+
+    @EntityGraph(attributePaths = {"author", "category", "reviewedBy"})
+    @Query("""
+            select p
+            from ForumPost p
+            where p.status = :status
+            order by
+              (select count(c.id) from ForumComment c where c.post.id = p.id) desc,
+              (
+                (select count(v.id) from PostVote v where v.post.id = p.id and v.voteType = com.skillsync.skillsync.enums.VoteType.UPVOTE) * 2
+                + (select count(s.id) from PostSave s where s.post.id = p.id)
+              ) desc,
+              p.createdAt desc
+            """)
+    Page<ForumPost> findTrendingByStatus(@Param("status") ForumPostStatus status, Pageable pageable);
 }

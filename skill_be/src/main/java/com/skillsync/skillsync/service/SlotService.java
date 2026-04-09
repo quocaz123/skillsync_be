@@ -17,7 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -58,8 +60,56 @@ public class SlotService {
             throw new AppException(ErrorCode.FORBIDDEN);
         }
 
+        if (request.getSlots() == null || request.getSlots().isEmpty()) {
+            return List.of();
+        }
+
+        // Load trước các slot hiện có (trừ CANCELLED) theo các ngày cần tạo để check overlap
+        List<java.time.LocalDate> dates = request.getSlots().stream()
+                .map(CreateSlotsRequest.SlotEntry::getDate)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+
+        Map<java.time.LocalDate, List<TeachingSlot>> existingByDate = new HashMap<>();
+        if (!dates.isEmpty()) {
+            List<TeachingSlot> existing = slotRepository.findByTeachingSkillIdAndSlotDateInAndStatusNot(
+                    skill.getId(), dates, SlotStatus.CANCELLED);
+            for (TeachingSlot s : existing) {
+                existingByDate.computeIfAbsent(s.getSlotDate(), key -> new ArrayList<>()).add(s);
+            }
+        }
+
         List<TeachingSlot> toSave = new ArrayList<>();
         for (CreateSlotsRequest.SlotEntry entry : request.getSlots()) {
+            if (entry == null || entry.getDate() == null || entry.getTime() == null) {
+                throw new AppException(ErrorCode.INVALID_REQUEST);
+            }
+
+            java.time.LocalTime start = entry.getTime();
+            java.time.LocalTime end = normalizeEndTime(entry.getTime(), entry.getEndTime());
+            if (!end.isAfter(start)) {
+                throw new AppException(ErrorCode.INVALID_REQUEST);
+            }
+
+            // Check overlap với slot hiện có + những slot sẽ tạo trong batch (cùng ngày)
+            List<TeachingSlot> dayExisting = existingByDate.getOrDefault(entry.getDate(), List.of());
+            for (TeachingSlot existing : dayExisting) {
+                java.time.LocalTime existingStart = existing.getSlotTime();
+                java.time.LocalTime existingEnd = normalizeEndTime(existing.getSlotTime(), existing.getSlotEndTime());
+                if (isOverlap(existingStart, existingEnd, start, end)) {
+                    throw new AppException(ErrorCode.SLOT_TIME_CONFLICT);
+                }
+            }
+            for (TeachingSlot pending : toSave) {
+                if (!pending.getSlotDate().equals(entry.getDate())) continue;
+                java.time.LocalTime pendingStart = pending.getSlotTime();
+                java.time.LocalTime pendingEnd = normalizeEndTime(pending.getSlotTime(), pending.getSlotEndTime());
+                if (isOverlap(pendingStart, pendingEnd, start, end)) {
+                    throw new AppException(ErrorCode.SLOT_TIME_CONFLICT);
+                }
+            }
+
             // Bỏ qua nếu đã tồn tại slot cùng ngày + giờ
             if (!slotRepository.existsByTeachingSkillIdAndSlotDateAndSlotTime(
                     skill.getId(), entry.getDate(), entry.getTime())) {
@@ -107,5 +157,21 @@ public class SlotService {
                 .creditCost(s.getCreditCost())
                 .status(s.getStatus())
                 .build();
+    }
+
+    private static java.time.LocalTime normalizeEndTime(java.time.LocalTime start, java.time.LocalTime end) {
+        if (start == null) return end;
+        if (end == null) return start.plusHours(1);
+        return end;
+    }
+
+    /**
+     * Overlap theo khoảng [start, end), tức:
+     * overlap nếu existingStart < newEnd && newStart < existingEnd
+     */
+    private static boolean isOverlap(java.time.LocalTime aStart, java.time.LocalTime aEnd,
+                                     java.time.LocalTime bStart, java.time.LocalTime bEnd) {
+        if (aStart == null || aEnd == null || bStart == null || bEnd == null) return false;
+        return aStart.isBefore(bEnd) && bStart.isBefore(aEnd);
     }
 }

@@ -58,6 +58,30 @@ public class SessionService {
             throw new AppException(ErrorCode.FORBIDDEN); // teacher không tự book slot mình
         }
 
+        // Không cho học viên đặt slot bị trùng/overlap với lịch học hiện có của chính họ
+        java.time.LocalTime slotStart = slot.getSlotTime();
+        java.time.LocalTime slotEnd = normalizeEndTime(slot.getSlotTime(), slot.getSlotEndTime());
+        if (slotStart == null) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+        if (slotEnd != null && !slotEnd.isAfter(slotStart)) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        List<Session> learnerSessions = sessionRepository.findByLearnerIdAndStatusNotOrderByCreatedAtDesc(
+                learner.getId(), SessionStatus.CANCELLED);
+        for (Session s : learnerSessions) {
+            if (s.getSlot() == null) continue;
+            if (s.getSlot().getSlotDate() == null || s.getSlot().getSlotTime() == null) continue;
+            if (!s.getSlot().getSlotDate().equals(slot.getSlotDate())) continue;
+
+            java.time.LocalTime otherStart = s.getSlot().getSlotTime();
+            java.time.LocalTime otherEnd = normalizeEndTime(otherStart, s.getSlot().getSlotEndTime());
+            if (isOverlap(otherStart, otherEnd, slotStart, slotEnd)) {
+                throw new AppException(ErrorCode.SESSION_TIME_CONFLICT);
+            }
+        }
+
         int cost = slot.getCreditCost() != null ? slot.getCreditCost() : slot.getTeachingSkill().getCreditsPerHour();
         if (learner.getCreditsBalance() == null || learner.getCreditsBalance() < cost) {
             throw new AppException(ErrorCode.INSUFFICIENT_CREDITS);
@@ -90,6 +114,18 @@ public class SessionService {
                 .build());
 
         return toResponse(session);
+    }
+
+    private static java.time.LocalTime normalizeEndTime(java.time.LocalTime start, java.time.LocalTime end) {
+        if (start == null) return end;
+        if (end == null) return start.plusHours(1);
+        return end;
+    }
+
+    private static boolean isOverlap(java.time.LocalTime aStart, java.time.LocalTime aEnd,
+                                     java.time.LocalTime bStart, java.time.LocalTime bEnd) {
+        if (aStart == null || aEnd == null || bStart == null || bEnd == null) return false;
+        return aStart.isBefore(bEnd) && bStart.isBefore(aEnd);
     }
 
     // ── Approve/Reject ──────────────────────────────────────

@@ -21,10 +21,17 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -96,10 +103,7 @@ public class ForumPostService {
                 searchKeyword,
                 pageable);
 
-        List<ForumPostResponse> content = posts.getContent().stream()
-            .map(post -> toResponseSafely(post, currentUser))
-            .filter(java.util.Objects::nonNull)
-            .toList();
+        List<ForumPostResponse> content = toResponses(posts.getContent(), currentUser);
 
         return new PageImpl<>(content, pageable, posts.getTotalElements());
     }
@@ -257,31 +261,11 @@ public class ForumPostService {
     @Transactional(readOnly = true)
     public List<ForumPostResponse> getTrendingPosts(int limit) {
         User currentUser = getCurrentUserOrNull();
-        return postRepository.findByStatusOrderByCreatedAtDesc(ForumPostStatus.APPROVED).stream()
-            .map(post -> toResponseSafely(post, currentUser))
-            .filter(java.util.Objects::nonNull)
-            .sorted((left, right) -> {
-                long leftComments = left.getCommentCount() != null ? left.getCommentCount() : 0L;
-                long rightComments = right.getCommentCount() != null ? right.getCommentCount() : 0L;
-
-                int commentCompare = Long.compare(rightComments, leftComments);
-                if (commentCompare != 0) return commentCompare;
-
-                long leftScore = (left.getUpvotes() != null ? left.getUpvotes() : 0L) * 2
-                    + (left.getSaveCount() != null ? left.getSaveCount() : 0L);
-                long rightScore = (right.getUpvotes() != null ? right.getUpvotes() : 0L) * 2
-                    + (right.getSaveCount() != null ? right.getSaveCount() : 0L);
-
-                int scoreCompare = Long.compare(rightScore, leftScore);
-                if (scoreCompare != 0) return scoreCompare;
-
-                if (left.getCreatedAt() == null && right.getCreatedAt() == null) return 0;
-                if (left.getCreatedAt() == null) return 1;
-                if (right.getCreatedAt() == null) return -1;
-                return right.getCreatedAt().compareTo(left.getCreatedAt());
-            })
-            .limit(limit)
-            .toList();
+        int safeLimit = Math.max(1, Math.min(limit, 50));
+        List<ForumPost> posts = postRepository
+                .findTrendingByStatus(ForumPostStatus.APPROVED, PageRequest.of(0, safeLimit))
+                .getContent();
+        return toResponses(posts, currentUser);
     }
 
     /**
@@ -297,10 +281,7 @@ public class ForumPostService {
                 ? postRepository.findByAuthorIdOrderByCreatedAtDesc(userId, pageable)
                 : postRepository.findByAuthorIdAndStatusOrderByCreatedAtDesc(userId, ForumPostStatus.APPROVED, pageable);
 
-        List<ForumPostResponse> content = posts.getContent().stream()
-            .map(post -> toResponseSafely(post, currentUser))
-            .filter(java.util.Objects::nonNull)
-            .toList();
+        List<ForumPostResponse> content = toResponses(posts.getContent(), currentUser);
 
         return new PageImpl<>(content, pageable, posts.getTotalElements());
     }
@@ -316,6 +297,7 @@ public class ForumPostService {
      * Convert entity to response DTO (with current user for like/save status)
      */
     private ForumPostResponse toResponse(ForumPost post, User currentUser) {
+        // Fallback single-item mapping (kept for create/update/detail endpoints).
         Long upvotes = voteRepository.countByPostIdAndVoteType(post.getId(), VoteType.UPVOTE);
         Long downvotes = voteRepository.countByPostIdAndVoteType(post.getId(), VoteType.DOWNVOTE);
         Long commentCount = commentService.getCommentCount(post.getId());
@@ -374,12 +356,114 @@ public class ForumPostService {
                 .build();
     }
 
-    private ForumPostResponse toResponseSafely(ForumPost post, User currentUser) {
-        try {
-            return toResponse(post, currentUser);
-        } catch (Exception e) {
-            return null;
+    private List<ForumPostResponse> toResponses(List<ForumPost> posts, User currentUser) {
+        if (posts == null || posts.isEmpty()) {
+            return List.of();
         }
+
+        List<UUID> postIds = posts.stream()
+                .filter(Objects::nonNull)
+                .map(ForumPost::getId)
+                .filter(Objects::nonNull)
+                .toList();
+
+        if (postIds.isEmpty()) {
+            return List.of();
+        }
+
+        Map<UUID, Long> upvotesByPostId = new HashMap<>();
+        Map<UUID, Long> downvotesByPostId = new HashMap<>();
+        for (PostVoteRepository.PostVoteAgg row : voteRepository.aggregateVotesByPostIds(postIds)) {
+            if (row != null && row.getPostId() != null) {
+                upvotesByPostId.put(row.getPostId(), row.getUpvotes() != null ? row.getUpvotes() : 0L);
+                downvotesByPostId.put(row.getPostId(), row.getDownvotes() != null ? row.getDownvotes() : 0L);
+            }
+        }
+
+        Map<UUID, Long> commentCountByPostId = new HashMap<>();
+        for (com.skillsync.skillsync.repository.ForumCommentRepository.PostCommentAgg row : commentService.getAggregatedCommentCounts(postIds)) {
+            if (row != null && row.getPostId() != null) {
+                commentCountByPostId.put(row.getPostId(), row.getCommentCount() != null ? row.getCommentCount() : 0L);
+            }
+        }
+
+        Map<UUID, Long> saveCountByPostId = new HashMap<>();
+        for (PostSaveRepository.PostSaveAgg row : saveRepository.aggregateSavesByPostIds(postIds)) {
+            if (row != null && row.getPostId() != null) {
+                saveCountByPostId.put(row.getPostId(), row.getSaveCount() != null ? row.getSaveCount() : 0L);
+            }
+        }
+
+        Set<UUID> upvotedByCurrentUser = Collections.emptySet();
+        Set<UUID> savedByCurrentUser = Collections.emptySet();
+        if (currentUser != null && currentUser.getId() != null) {
+            upvotedByCurrentUser = new HashSet<>(voteRepository.findUpvotedPostIds(currentUser.getId(), postIds));
+            savedByCurrentUser = new HashSet<>(saveRepository.findSavedPostIds(currentUser.getId(), postIds));
+        }
+
+        Set<UUID> finalUpvotedByCurrentUser = upvotedByCurrentUser;
+        Set<UUID> finalSavedByCurrentUser = savedByCurrentUser;
+
+        return posts.stream()
+                .map(post -> {
+                    try {
+                        if (post == null) return null;
+
+                        if (post.getAuthor() == null) {
+                            throw new IllegalStateException("Post author is null for post: " + post.getId());
+                        }
+                        if (post.getCategory() == null) {
+                            throw new IllegalStateException("Post category is null for post: " + post.getId());
+                        }
+
+                        User author = post.getAuthor();
+                        ForumCategory category = post.getCategory();
+
+                        List<String> tags = post.getTags() != null && !post.getTags().isEmpty()
+                                ? List.of(post.getTags().split(","))
+                                : List.of();
+
+                        UUID postId = post.getId();
+                        long upvotes = upvotesByPostId.getOrDefault(postId, 0L);
+                        long downvotes = downvotesByPostId.getOrDefault(postId, 0L);
+                        long commentCount = commentCountByPostId.getOrDefault(postId, 0L);
+                        long saveCount = saveCountByPostId.getOrDefault(postId, 0L);
+
+                        boolean liked = currentUser != null && postId != null && finalUpvotedByCurrentUser.contains(postId);
+                        boolean saved = currentUser != null && postId != null && finalSavedByCurrentUser.contains(postId);
+
+                        return ForumPostResponse.builder()
+                                .id(postId)
+                                .authorId(author.getId())
+                                .authorName(author.getFullName())
+                                .authorRole(author.getRole() != null ? author.getRole().name() : "USER")
+                                .authorAvatar(author.getAvatarUrl())
+                                .categoryId(category.getId())
+                                .categoryName(category.getName())
+                                .title(post.getTitle())
+                                .content(post.getContent())
+                                .postType(post.getPostType())
+                                .tags(tags)
+                                .upvotes(upvotes)
+                                .downvotes(downvotes)
+                                .commentCount(commentCount)
+                                .saveCount(saveCount)
+                                .solved(post.getSolved())
+                                .liked(liked)
+                                .saved(saved)
+                                .status(post.getStatus())
+                                .rejectionReason(post.getRejectionReason())
+                                .reviewedAt(post.getReviewedAt())
+                                .reviewedByEmail(post.getReviewedBy() != null ? post.getReviewedBy().getEmail() : null)
+                                .createdAt(post.getCreatedAt())
+                                .updatedAt(post.getUpdatedAt())
+                                .build();
+                    } catch (Exception ignored) {
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .toList();
     }
 
             private AdminForumPostResponse toAdminResponse(ForumPost post) {
@@ -422,10 +506,6 @@ public class ForumPostService {
     /**
      * Convert entity to detail response with comments
      */
-    private ForumPostDetailResponse toDetailResponse(ForumPost post) {
-        return toDetailResponse(post, getCurrentUserOrNull());
-    }
-
     private ForumPostDetailResponse toDetailResponse(ForumPost post, User currentUser) {
 
         Long upvotes = voteRepository.countByPostIdAndVoteType(post.getId(), VoteType.UPVOTE);
