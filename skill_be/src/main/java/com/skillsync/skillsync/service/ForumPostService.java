@@ -256,7 +256,7 @@ public class ForumPostService {
     }
 
     /**
-     * Get trending posts (top 10 by comment count)
+     * Get trending posts (top 10 by upvotes first)
      */
     @Transactional(readOnly = true)
     public List<ForumPostResponse> getTrendingPosts(int limit) {

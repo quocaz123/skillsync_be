@@ -79,12 +79,12 @@ public interface ForumPostRepository extends JpaRepository<ForumPost, UUID> {
             from ForumPost p
             where p.status = :status
             order by
-              (select count(c.id) from ForumComment c where c.post.id = p.id) desc,
+                                                        (select count(v.id) from PostVote v where v.post.id = p.id and v.voteType = com.skillsync.skillsync.enums.VoteType.UPVOTE) desc,
               (
-                (select count(v.id) from PostVote v where v.post.id = p.id and v.voteType = com.skillsync.skillsync.enums.VoteType.UPVOTE) * 2
+                                                                (select count(c.id) from ForumComment c where c.post.id = p.id)
                 + (select count(s.id) from PostSave s where s.post.id = p.id)
               ) desc,
               p.createdAt desc
             """)
-    Page<ForumPost> findTrendingByStatus(@Param("status") ForumPostStatus status, Pageable pageable);
+                Page<ForumPost> findTrendingByStatus(@Param("status") ForumPostStatus status, Pageable pageable);
 }
