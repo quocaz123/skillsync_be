@@ -26,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -33,6 +34,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -74,19 +76,7 @@ public class ForumPostService {
         post.setRejectionReason("REJECTED".equalsIgnoreCase(request.getAction()) ? request.getRejectionReason() : null);
 
         ForumPost saved = postRepository.save(post);
-        forumRealtimeEventService.publishForumPostChangedEvent(
-            ForumPostChangedEvent.builder()
-                .action("VERIFY")
-                .postId(saved.getId())
-                .title(saved.getTitle())
-                .status(saved.getStatus())
-                .rejectionReason(saved.getRejectionReason())
-                .reviewedAt(saved.getReviewedAt())
-                .reviewedByEmail(saved.getReviewedBy() != null ? saved.getReviewedBy().getEmail() : null)
-                .authorId(saved.getAuthor() != null ? saved.getAuthor().getId() : null)
-                .categoryId(saved.getCategory() != null ? saved.getCategory().getId() : null)
-                .build()
-        );
+        forumRealtimeEventService.publishForumPostChangedEvent(buildForumPostChangedEvent(saved, "VERIFY"));
 
         return toAdminResponse(saved);
     }
@@ -151,19 +141,7 @@ public class ForumPostService {
                 .build();
 
         ForumPost saved = postRepository.save(post);
-        forumRealtimeEventService.publishForumPostChangedEvent(
-            ForumPostChangedEvent.builder()
-                .action("CREATE")
-                .postId(saved.getId())
-                .title(saved.getTitle())
-                .status(saved.getStatus())
-                .rejectionReason(saved.getRejectionReason())
-                .reviewedAt(saved.getReviewedAt())
-                .reviewedByEmail(saved.getReviewedBy() != null ? saved.getReviewedBy().getEmail() : null)
-                .authorId(saved.getAuthor() != null ? saved.getAuthor().getId() : null)
-                .categoryId(saved.getCategory() != null ? saved.getCategory().getId() : null)
-                .build()
-        );
+        forumRealtimeEventService.publishForumPostChangedEvent(buildForumPostChangedEvent(saved, "CREATE"));
         return toResponse(saved);
     }
 
@@ -209,19 +187,7 @@ public class ForumPostService {
         post.setReviewedAt(null);
 
         ForumPost updated = postRepository.save(post);
-        forumRealtimeEventService.publishForumPostChangedEvent(
-            ForumPostChangedEvent.builder()
-                .action("UPDATE")
-                .postId(updated.getId())
-                .title(updated.getTitle())
-                .status(updated.getStatus())
-                .rejectionReason(updated.getRejectionReason())
-                .reviewedAt(updated.getReviewedAt())
-                .reviewedByEmail(updated.getReviewedBy() != null ? updated.getReviewedBy().getEmail() : null)
-                .authorId(updated.getAuthor() != null ? updated.getAuthor().getId() : null)
-                .categoryId(updated.getCategory() != null ? updated.getCategory().getId() : null)
-                .build()
-        );
+        forumRealtimeEventService.publishForumPostChangedEvent(buildForumPostChangedEvent(updated, "UPDATE"));
         return toResponse(updated);
     }
 
@@ -238,19 +204,7 @@ public class ForumPostService {
             throw new RuntimeException("Unauthorized: only author can delete this post");
         }
 
-        forumRealtimeEventService.publishForumPostChangedEvent(
-            ForumPostChangedEvent.builder()
-                .action("DELETE")
-                .postId(post.getId())
-                .title(post.getTitle())
-                .status(post.getStatus())
-                .rejectionReason(post.getRejectionReason())
-                .reviewedAt(post.getReviewedAt())
-                .reviewedByEmail(post.getReviewedBy() != null ? post.getReviewedBy().getEmail() : null)
-                .authorId(post.getAuthor() != null ? post.getAuthor().getId() : null)
-                .categoryId(post.getCategory() != null ? post.getCategory().getId() : null)
-                .build()
-        );
+        forumRealtimeEventService.publishForumPostChangedEvent(buildForumPostChangedEvent(post, "DELETE"));
 
         postRepository.delete(post);
     }
@@ -354,6 +308,38 @@ public class ForumPostService {
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())
                 .build();
+    }
+
+    private ForumPostChangedEvent buildForumPostChangedEvent(ForumPost post, String action) {
+        return ForumPostChangedEvent.builder()
+                .action(action)
+                .postId(post.getId())
+                .title(post.getTitle())
+                .content(post.getContent())
+                .status(post.getStatus())
+                .rejectionReason(post.getRejectionReason())
+                .reviewedAt(post.getReviewedAt())
+                .reviewedByEmail(post.getReviewedBy() != null ? post.getReviewedBy().getEmail() : null)
+                .authorId(post.getAuthor() != null ? post.getAuthor().getId() : null)
+                .authorName(post.getAuthor() != null ? post.getAuthor().getFullName() : null)
+                .authorEmail(post.getAuthor() != null ? post.getAuthor().getEmail() : null)
+                .categoryId(post.getCategory() != null ? post.getCategory().getId() : null)
+                .categoryName(post.getCategory() != null ? post.getCategory().getName() : null)
+                .tags(parseTags(post.getTags()))
+                .createdAt(post.getCreatedAt())
+                .updatedAt(post.getUpdatedAt())
+                .build();
+    }
+
+    private List<String> parseTags(String tags) {
+        if (tags == null || tags.isBlank()) {
+            return List.of();
+        }
+
+        return Arrays.stream(tags.split(","))
+                .map(String::trim)
+                .filter(tag -> !tag.isBlank())
+                .collect(Collectors.toList());
     }
 
     private List<ForumPostResponse> toResponses(List<ForumPost> posts, User currentUser) {
