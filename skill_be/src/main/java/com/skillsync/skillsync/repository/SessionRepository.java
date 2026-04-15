@@ -42,4 +42,6 @@ public interface SessionRepository extends JpaRepository<Session, UUID> {
 
     @Query("SELECT COALESCE(SUM(s.creditCost), 0) FROM Session s WHERE s.teacher.id = :userId AND s.status IN ('SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'DISPUTED')")
     Integer getTeacherPendingCredits(@Param("userId") UUID userId);
+
+    List<Session> findByLearnerIdAndStatusNotOrderByCreatedAtDesc(UUID learnerId, SessionStatus status);
 }

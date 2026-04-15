@@ -17,6 +17,8 @@ public enum ErrorCode {
     INVALID_REQUEST(400, "Invalid request parameters", HttpStatus.BAD_REQUEST),
     INVALID_GOOGLE_TOKEN(401, "Invalid Google token", HttpStatus.UNAUTHORIZED),
     SLOT_ALREADY_BOOKED(409, "Slot is no longer available", HttpStatus.CONFLICT),
+    SLOT_TIME_CONFLICT(409, "Slot time conflicts with an existing slot", HttpStatus.CONFLICT),
+    SESSION_TIME_CONFLICT(409, "This slot overlaps with one of your existing sessions", HttpStatus.CONFLICT),
     INSUFFICIENT_CREDITS(402, "Insufficient credits balance", HttpStatus.PAYMENT_REQUIRED),
     TOO_EARLY_TO_JOIN(400, "Session has not started yet (join 10 mins before)", HttpStatus.BAD_REQUEST),
     SESSION_EXPIRED(400, "Session join window has expired", HttpStatus.BAD_REQUEST),
