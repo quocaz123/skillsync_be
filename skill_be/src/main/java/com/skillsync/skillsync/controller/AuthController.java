@@ -15,7 +15,6 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import com.skillsync.skillsync.dto.request.auth.ForgotPasswordRequest;
 import com.skillsync.skillsync.dto.request.auth.ResetPasswordRequest;
@@ -42,13 +41,9 @@ public class AuthController {
     }
 
     @PostMapping("/verify-email")
-    public ApiResponse<UserAuthResponse> verifyEmail(@RequestBody VerifyEmailRequest request,
-            HttpServletResponse response) {
-        AuthenticationResponse auth = authService.verifyEmail(request.getEmail(), request.getOtpCode());
-        cookieService.setAuthCookies(response, auth);
-
-        UserAuthResponse userAuthResponse = mapToUserAuthResponse(auth);
-        return ApiResponse.success(userAuthResponse);
+    public ApiResponse<Void> verifyEmail(@RequestBody VerifyEmailRequest request) {
+        authService.verifyEmail(request.getEmail(), request.getOtpCode());
+        return ApiResponse.success(null);
     }
 
     @PostMapping("/resend-verification")

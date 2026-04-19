@@ -28,4 +28,7 @@ public class AuthEvent {
 
     /** Mã OTP phục vụ Verify Account hoặc Forgot Password */
     String otpCode;
+
+    /** Số phút mã OTP còn hiệu lực (đồng bộ với AuthConstants.OTP_VALID_MINUTES phía skill_be) */
+    Integer otpValidMinutes;
 }

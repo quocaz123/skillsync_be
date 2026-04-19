@@ -71,10 +71,12 @@ public class AuthEventConsumer {
     }
 
     private void handleVerifyAccount(AuthEvent event) {
+        int otpValidMinutes = event.getOtpValidMinutes() != null ? event.getOtpValidMinutes() : 15;
         Map<String, Object> variables = Map.of(
                 "recipientName", event.getRecipientName() != null ? event.getRecipientName() : "bạn",
                 "otpCode", event.getOtpCode() != null ? event.getOtpCode() : "N/A",
-                "frontendUrl", frontendUrl);
+                "frontendUrl", frontendUrl,
+                "otpValidMinutes", otpValidMinutes);
 
         emailService.sendHtmlEmail(new TemplateEmailRequest(
                 event.getRecipientEmail(),
@@ -86,12 +88,14 @@ public class AuthEventConsumer {
     /** OTP đặt lại / thiết lập mật khẩu (cùng template reset_password). */
     private void handleResetPasswordEmail(AuthEvent event) {
         String email = event.getRecipientEmail();
+        int otpValidMinutes = event.getOtpValidMinutes() != null ? event.getOtpValidMinutes() : 15;
         String resetUrl = frontendUrl + "/reset-password?email=" + URLEncoder.encode(email != null ? email : "", StandardCharsets.UTF_8);
         Map<String, Object> variables = Map.of(
                 "recipientName", event.getRecipientName() != null ? event.getRecipientName() : "bạn",
                 "otpCode", event.getOtpCode() != null ? event.getOtpCode() : "N/A",
                 "frontendUrl", frontendUrl,
-                "resetUrl", resetUrl);
+                "resetUrl", resetUrl,
+                "otpValidMinutes", otpValidMinutes);
 
         emailService.sendHtmlEmail(new TemplateEmailRequest(
                 email,

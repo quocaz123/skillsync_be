@@ -6,6 +6,7 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
+import com.skillsync.skillsync.constant.AuthConstants;
 import com.skillsync.skillsync.dto.request.auth.AuthenticationRequest;
 import com.skillsync.skillsync.dto.request.auth.LoginRequest;
 import com.skillsync.skillsync.dto.response.auth.AuthenticationResponse;
@@ -68,7 +69,7 @@ public class AuthService {
         // Sinh mã OTP 6 số ngẫu nhiên
         String otpCode = String.format("%06d", new java.util.Random().nextInt(999999));
         user.setOtpCode(otpCode);
-        user.setOtpExpiryTime(java.time.LocalDateTime.now().plusMinutes(15));
+        user.setOtpExpiryTime(java.time.LocalDateTime.now().plusMinutes(AuthConstants.OTP_VALID_MINUTES));
         user.setIsEmailVerified(false);
 
         userRepository.save(user);
@@ -241,12 +242,13 @@ public class AuthService {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
-    public AuthenticationResponse verifyEmail(String email, String otpCode) {
+    /** Xác minh email — không phát hành phiên đăng nhập; người dùng đăng nhập thủ công sau đó. */
+    public void verifyEmail(String email, String otpCode) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         if (Boolean.TRUE.equals(user.getIsEmailVerified())) {
-            return buildAuth(user);
+            return;
         }
 
         if (user.getOtpCode() == null || !user.getOtpCode().equals(otpCode)) {
@@ -262,10 +264,7 @@ public class AuthService {
         user.setOtpExpiryTime(null);
         userRepository.save(user);
 
-        // Publish WELCOME now that they are verified
         notificationEventPublisher.publishWelcome(user.getEmail(), user.getFullName());
-
-        return buildAuth(user);
     }
 
     public void resendOTP(String email) {
@@ -278,7 +277,7 @@ public class AuthService {
 
         String otpCode = String.format("%06d", new java.util.Random().nextInt(999999));
         user.setOtpCode(otpCode);
-        user.setOtpExpiryTime(java.time.LocalDateTime.now().plusMinutes(15));
+        user.setOtpExpiryTime(java.time.LocalDateTime.now().plusMinutes(AuthConstants.OTP_VALID_MINUTES));
         userRepository.save(user);
 
         notificationEventPublisher.publishVerifyAccount(user.getEmail(), user.getFullName(), otpCode);
@@ -290,7 +289,7 @@ public class AuthService {
 
         String otpCode = String.format("%06d", new java.util.Random().nextInt(999999));
         user.setOtpCode(otpCode);
-        user.setOtpExpiryTime(java.time.LocalDateTime.now().plusMinutes(15));
+        user.setOtpExpiryTime(java.time.LocalDateTime.now().plusMinutes(AuthConstants.OTP_VALID_MINUTES));
         userRepository.save(user);
 
         notificationEventPublisher.publishForgotPassword(user.getEmail(), user.getFullName(), otpCode);

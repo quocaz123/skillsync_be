@@ -1,5 +1,6 @@
 package com.skillsync.skillsync.service;
 
+import com.skillsync.skillsync.constant.AuthConstants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -60,6 +61,7 @@ public class NotificationEventPublisher {
         event.put("recipientEmail", email);
         event.put("recipientName", fullName);
         event.put("otpCode", otpCode);
+        event.put("otpValidMinutes", AuthConstants.OTP_VALID_MINUTES);
         event.put("timestamp", LocalDateTime.now().toString());
 
         sendSafely(authTopic, email, event, "VERIFY_ACCOUNT");
@@ -72,6 +74,7 @@ public class NotificationEventPublisher {
         event.put("recipientEmail", email);
         event.put("recipientName", fullName);
         event.put("otpCode", otpCode);
+        event.put("otpValidMinutes", AuthConstants.OTP_VALID_MINUTES);
         event.put("timestamp", LocalDateTime.now().toString());
 
         sendSafely(authTopic, email, event, "RESET_PASSWORD");
