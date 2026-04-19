@@ -13,6 +13,7 @@ import org.thymeleaf.spring6.SpringTemplateEngine;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Core email sending service.
@@ -38,18 +39,46 @@ public class EmailService {
      * @param request Request DTO (to/subject/template/variables)
      */
     public void sendHtmlEmail(TemplateEmailRequest request) {
+        trySendHtmlEmail(request);
+    }
+
+    /**
+     * Same as sendHtmlEmail but returns status.
+     */
+    public boolean trySendHtmlEmail(TemplateEmailRequest request) {
         try {
             if (request == null || request.to() == null || request.to().isBlank()) {
                 log.warn("[EmailService] Skip sending email: missing recipient");
-                return;
+                return false;
             }
+            if (senderEmail == null || senderEmail.isBlank()) {
+                log.warn("[EmailService] Skip sending email: missing sender email configuration (app.mail.sender-email)");
+                return false;
+            }
+
             String templateName = request.templateName();
+            if (templateName == null || templateName.isBlank()) {
+                log.warn("[EmailService] Skip sending email to {}: missing templateName", request.to());
+                return false;
+            }
+
+            String subject = request.subject();
+            if (subject == null || subject.isBlank()) {
+                log.warn("[EmailService] Skip sending email to {}: missing subject", request.to());
+                return false;
+            }
+
             Map<String, Object> variables = request.variables() != null ? request.variables() : Map.of();
 
             // Render Thymeleaf template → HTML string
             Context context = new Context();
             context.setVariables(variables);
-            String htmlContent = templateEngine.process(templateName, context);
+            String htmlContent = Objects.requireNonNullElse(templateEngine.process(templateName, context), "");
+
+            final String fromEmail = Objects.requireNonNull(senderEmail, "senderEmail must not be null");
+            final String to = Objects.requireNonNull(request.to(), "recipient must not be null");
+            final String nonNullSubject = Objects.requireNonNull(subject, "subject must not be null");
+            final String nonNullHtmlContent = Objects.requireNonNull(htmlContent, "htmlContent must not be null");
 
             // Tạo MimeMessage
             MimeMessage message = mailSender.createMimeMessage();
@@ -59,17 +88,19 @@ public class EmailService {
                     StandardCharsets.UTF_8.name()
             );
 
-            helper.setFrom(senderEmail, senderName);
-            helper.setTo(request.to());
-            helper.setSubject(request.subject());
-            helper.setText(htmlContent, true); // true = isHtml
+            helper.setFrom(fromEmail);
+            helper.setTo(to);
+            helper.setSubject(nonNullSubject);
+            helper.setText(nonNullHtmlContent, true); // true = isHtml
 
             mailSender.send(message);
             log.info("[EmailService] Sent '{}' email to {}", templateName, request.to());
+            return true;
 
         } catch (Exception e) {
             log.error("[EmailService] Failed to send '{}' email to {}: {}", request != null ? request.templateName() : "?",
                     request != null ? request.to() : "?", e.getMessage(), e);
+            return false;
         }
     }
 }

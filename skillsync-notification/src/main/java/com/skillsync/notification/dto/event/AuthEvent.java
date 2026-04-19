@@ -23,6 +23,12 @@ public class AuthEvent {
     /** Tên đầy đủ của người nhận */
     String recipientName;
 
+    /** Password reset URL (for PASSWORD_RESET event) */
+    String resetUrl;
+
+    /** 6-digit verification code (for EMAIL_VERIFICATION event) */
+    String verificationCode;
+
     /** Thời điểm sự kiện xảy ra (ISO-8601 string) */
     String timestamp;
 }

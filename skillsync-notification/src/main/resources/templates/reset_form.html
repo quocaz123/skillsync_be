@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reset Password</title>
+    <style>
+        body { margin: 0; padding: 0; font-family: Arial, sans-serif; background: #f6f7fb; color: #111827; }
+        .container { max-width: 520px; margin: 0 auto; padding: 24px; }
+        .card { background: white; border-radius: 14px; padding: 24px; border: 1px solid #e5e7eb; }
+        .title { font-size: 20px; font-weight: 800; margin: 0 0 12px; }
+        label { font-size: 13px; font-weight: 700; color: #374151; display: block; margin-bottom: 6px; }
+        input { width: 100%; padding: 12px 12px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 14px; outline: none; }
+        input:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,0.15); }
+        .btn { width: 100%; margin-top: 14px; padding: 12px 16px; background: #6d28d9; color: white; border: none; border-radius: 10px; font-weight: 800; cursor: pointer; }
+        .muted { color: #6b7280; font-size: 13px; line-height: 1.5; }
+        .error { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 10px 12px; border-radius: 10px; font-size: 13px; margin-bottom: 12px; }
+        .success { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; padding: 10px 12px; border-radius: 10px; font-size: 13px; margin-bottom: 12px; }
+        a { color: #6d28d9; font-weight: 700; text-decoration: none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="card">
+        <p class="title">Reset your password</p>
+
+        <div th:if="${error}" class="error" th:text="${error}">Error</div>
+        <div th:if="${success}" class="success" th:text="${success}">Success</div>
+
+        <form method="post" th:action="@{/password/reset}">
+            <input type="hidden" name="token" th:value="${token}" />
+
+            <label for="newPassword">New password</label>
+            <input id="newPassword" name="newPassword" type="password" minlength="8" required placeholder="At least 8 characters" />
+
+            <label for="confirmPassword" style="margin-top: 12px;">Confirm password</label>
+            <input id="confirmPassword" name="confirmPassword" type="password" minlength="8" required placeholder="Re-enter password" />
+
+            <button class="btn" type="submit">Update password</button>
+        </form>
+
+        <p class="muted" style="margin-top: 12px;">
+            After updating, you can return to <a th:href="${frontendUrl}" target="_blank" rel="noreferrer">the app</a>.
+        </p>
+    </div>
+</div>
+</body>
+</html>
+

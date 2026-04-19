@@ -24,6 +24,7 @@ public class JwtService {
 
     final long ACCES_EXP = 60 * 60 * 1000; // 1 hour
     final long REFRESH_EXP = 7 * 24 * 60 * 60 * 1000; // 7 days
+    final long PASSWORD_RESET_EXP = 15 * 60 * 1000; // 15 minutes
 
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(secretKeyString.getBytes());
@@ -55,6 +56,16 @@ public class JwtService {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+    }
+
+    public String generatePasswordResetToken(String email) {
+        return Jwts.builder()
+                .subject(email)
+                .claim("type", "PASSWORD_RESET")
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + PASSWORD_RESET_EXP))
+                .signWith(getSigningKey())
+                .compact();
     }
 }
 

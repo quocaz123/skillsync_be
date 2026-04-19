@@ -4,6 +4,8 @@ server:
     context-path: /notification
 
 spring:
+  config:
+    import: optional:file:.env[.properties]
   # ── Mail ────────────────────────────────────────────────────────────────────
   mail:
     host: smtp.gmail.com
@@ -47,6 +49,8 @@ app:
     sender-name: ${MAIL_SENDER_NAME:SkillSync}
     sender-email: ${MAIL_SENDER_EMAIL:${MAIL_USERNAME}}
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  backend-url: ${BACKEND_URL:http://localhost:8080/skillsync}
+  public-url: ${NOTIFICATION_PUBLIC_URL:http://localhost:8081/notification}
 
 # ── Kafka Topics ───────────────────────────────────────────────────────────────
 kafka:

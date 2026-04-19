@@ -66,6 +66,22 @@ public class User {
     @Column(name = "has_password", nullable = false)
     Boolean hasPassword = true;
 
+    @Builder.Default
+    @Column(name = "email_verified", nullable = false, columnDefinition = "boolean default false")
+    Boolean emailVerified = false;
+
+    @Column(name = "email_verification_code_hash", length = 255)
+    String emailVerificationCodeHash;
+
+    @Column(name = "email_verification_expires_at")
+    LocalDateTime emailVerificationExpiresAt;
+
+    @Column(name = "password_reset_code_hash", length = 255)
+    String passwordResetCodeHash;
+
+    @Column(name = "password_reset_expires_at")
+    LocalDateTime passwordResetExpiresAt;
+
     @CreationTimestamp
     @Column(name = "created_at")
     LocalDateTime createdAt;

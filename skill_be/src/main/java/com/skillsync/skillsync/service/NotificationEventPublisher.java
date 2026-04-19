@@ -54,6 +54,33 @@ public class NotificationEventPublisher {
         sendSafely(authTopic, email, event, "WELCOME");
     }
 
+    /**
+     * Publish PASSWORD_RESET event when user requests a password reset.
+     */
+    public void publishPasswordReset(String email, String fullName, String resetUrl) {
+        Map<String, Object> event = new HashMap<>();
+        event.put("eventType", "PASSWORD_RESET");
+        event.put("recipientEmail", email);
+        event.put("recipientName", fullName);
+        event.put("resetUrl", resetUrl);
+        event.put("timestamp", LocalDateTime.now().toString());
+
+        sendSafely(authTopic, email, event, "PASSWORD_RESET");
+    }
+
+    /**
+     * Request email verification OTP to be generated/sent by skillsync-notification.
+     */
+    public void publishEmailVerificationRequest(String email, String fullName) {
+        Map<String, Object> event = new HashMap<>();
+        event.put("eventType", "EMAIL_VERIFICATION_REQUEST");
+        event.put("recipientEmail", email);
+        event.put("recipientName", fullName);
+        event.put("timestamp", LocalDateTime.now().toString());
+
+        sendSafely(authTopic, email, event, "EMAIL_VERIFICATION_REQUEST");
+    }
+
     // ── SESSION Events ────────────────────────────────────────────────────────
 
     /**

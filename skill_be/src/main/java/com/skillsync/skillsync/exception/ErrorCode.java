@@ -16,6 +16,7 @@ public enum ErrorCode {
     INTERNAL_SERVER_ERROR(500, "Internal server error", HttpStatus.INTERNAL_SERVER_ERROR),
     INVALID_REQUEST(400, "Invalid request parameters", HttpStatus.BAD_REQUEST),
     INVALID_GOOGLE_TOKEN(401, "Invalid Google token", HttpStatus.UNAUTHORIZED),
+    EMAIL_NOT_VERIFIED(403, "Email is not verified", HttpStatus.FORBIDDEN),
     SLOT_ALREADY_BOOKED(409, "Slot is no longer available", HttpStatus.CONFLICT),
     INSUFFICIENT_CREDITS(402, "Insufficient credits balance", HttpStatus.PAYMENT_REQUIRED),
     TOO_EARLY_TO_JOIN(400, "Session has not started yet (join 10 mins before)", HttpStatus.BAD_REQUEST),

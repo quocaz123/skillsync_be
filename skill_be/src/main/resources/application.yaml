@@ -1,5 +1,3 @@
-# SkillSync API base: http://localhost:8080/skillsync — giữ port/context này cho khớp frontend.
-# (8081 + /notification là kiểu service khác, không dùng ở đây.)
 server:
   port: 8080
   servlet:
@@ -22,28 +20,6 @@ spring:
         "[format_sql]": false
         "[jdbc.lob.non_contextual_creation]": true
 
-<<<<<<< HEAD:src/main/resources/application.yaml
-  data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
-
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
-    consumer:
-      group-id: notification-group-v2
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
-      properties:
-        spring.json.trusted.packages: "*"
-        spring.json.use.type.headers: false
-        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
-        spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
-    listener:
-      ack-mode: record
-=======
   # ── Kafka Producer (Notification Events) ────────────────
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
@@ -52,7 +28,6 @@ spring:
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       properties:
         spring.json.add.type.headers: false
->>>>>>> origin/quokka:skill_be/src/main/resources/application.yaml
 
 jwt:
   secret: ${JWT_SECRET:}
@@ -61,10 +36,8 @@ app:
   cookie:
     secure: false
     same-site: Lax
-
-notification:
-  # URL của Notification-Service (jobmate) để gửi email chào mừng khi user đăng nhập lần đầu
-  base-url: ${NOTIFICATION_BASE_URL:http://localhost:8081/notification}
+  notification:
+    public-url: ${NOTIFICATION_PUBLIC_URL:http://localhost:8081/notification}
 
 google:
   client-id: ${GOOGLE_CLIENT_ID}
@@ -82,8 +55,6 @@ aws:
 zego:
   app-id: ${ZEGO_APP_ID:1922651206}
   server-secret: ${ZEGO_SERVER_SECRET:7121aee3e285a02ad297b991ba904795}
-<<<<<<< HEAD:src/main/resources/application.yaml
-=======
 
 # ── Notification Kafka Topics ────────────────────────────
 kafka:
@@ -92,4 +63,3 @@ kafka:
     session: skillsync.notification.session
     credit: skillsync.notification.credit
     skill: skillsync.notification.skill
->>>>>>> origin/quokka:skill_be/src/main/resources/application.yaml
