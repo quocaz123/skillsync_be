@@ -55,6 +55,11 @@ public class UserTeachingSkill {
     @Column(name = "verification_status", nullable = false)
     VerificationStatus verificationStatus = VerificationStatus.PENDING;
 
+    /** Khi true: không hiển thị Explore/AI, không nhận đặt lịch mới; dữ liệu & lịch cũ giữ nguyên. */
+    @Builder.Default
+    @Column(name = "is_hidden", nullable = false)
+    boolean hidden = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "verified_by")
     User verifiedBy;

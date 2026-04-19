@@ -38,8 +38,13 @@ public class SlotService {
                 .stream().map(this::toResponse).toList();
     }
 
-    /** Teacher xem slot OPEN (public — cho Explore) */
+    /** Slot trống công khai — kỹ năng đang tạm ẩn thì không trả slot (Explore) */
     public List<SlotResponse> getOpenSlotsByTeachingSkill(UUID teachingSkillId) {
+        UserTeachingSkill skill = teachingSkillRepository.findById(teachingSkillId)
+                .orElseThrow(() -> new AppException(ErrorCode.SKILL_NOT_FOUND));
+        if (skill.isHidden()) {
+            return List.of();
+        }
         return slotRepository
                 .findByTeachingSkillIdAndStatusOrderBySlotDateAscSlotTimeAsc(teachingSkillId, SlotStatus.OPEN)
                 .stream().map(this::toResponse).toList();

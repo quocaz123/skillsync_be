@@ -18,6 +18,5 @@ public class AdminUserResponse {
     private UserStatus status;
     private Role role;
     private Integer creditsBalance;
-    private Integer trustScore;
     private LocalDateTime createdAt;
 }

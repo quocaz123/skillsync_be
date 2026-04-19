@@ -21,6 +21,7 @@ public class SessionResponse {
     // Slot info
     private LocalDate slotDate;
     private LocalTime slotTime;
+    private LocalTime slotEndTime;
 
     // Teacher info
     private UUID teacherId;

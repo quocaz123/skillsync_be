@@ -11,6 +11,8 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.stereotype.Component;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 /**
@@ -36,12 +38,17 @@ public class AuthEventConsumer {
 
             if ("WELCOME".equals(event.getEventType())) {
                 handleWelcome(event);
+            } else if ("VERIFY_ACCOUNT".equals(event.getEventType())) {
+                handleVerifyAccount(event);
+            } else if ("RESET_PASSWORD".equals(event.getEventType()) || "FORGOT_PASSWORD".equals(event.getEventType())) {
+                handleResetPasswordEmail(event);
             } else {
                 log.warn("[AuthEventConsumer] Unhandled eventType: {}", event.getEventType());
             }
 
         } catch (Exception e) {
             log.error("[AuthEventConsumer] Error processing auth event: {}", e.getMessage(), e);
+            throw new RuntimeException("Error processing auth event", e); // Re-throw to trigger retry
         }
     }
 
@@ -61,5 +68,39 @@ public class AuthEventConsumer {
                 "welcome",
                 variables));
 
+    }
+
+    private void handleVerifyAccount(AuthEvent event) {
+        int otpValidMinutes = event.getOtpValidMinutes() != null ? event.getOtpValidMinutes() : 15;
+        Map<String, Object> variables = Map.of(
+                "recipientName", event.getRecipientName() != null ? event.getRecipientName() : "bạn",
+                "otpCode", event.getOtpCode() != null ? event.getOtpCode() : "N/A",
+                "frontendUrl", frontendUrl,
+                "otpValidMinutes", otpValidMinutes);
+
+        emailService.sendHtmlEmail(new TemplateEmailRequest(
+                event.getRecipientEmail(),
+                "Xác minh tài khoản SkillSync của bạn",
+                "verify_email",
+                variables));
+    }
+
+    /** OTP đặt lại / thiết lập mật khẩu (cùng template reset_password). */
+    private void handleResetPasswordEmail(AuthEvent event) {
+        String email = event.getRecipientEmail();
+        int otpValidMinutes = event.getOtpValidMinutes() != null ? event.getOtpValidMinutes() : 15;
+        String resetUrl = frontendUrl + "/reset-password?email=" + URLEncoder.encode(email != null ? email : "", StandardCharsets.UTF_8);
+        Map<String, Object> variables = Map.of(
+                "recipientName", event.getRecipientName() != null ? event.getRecipientName() : "bạn",
+                "otpCode", event.getOtpCode() != null ? event.getOtpCode() : "N/A",
+                "frontendUrl", frontendUrl,
+                "resetUrl", resetUrl,
+                "otpValidMinutes", otpValidMinutes);
+
+        emailService.sendHtmlEmail(new TemplateEmailRequest(
+                email,
+                "Thiết lập / đặt lại mật khẩu SkillSync",
+                "reset_password",
+                variables));
     }
 }

@@ -9,7 +9,10 @@ import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
+import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
+import org.springframework.util.backoff.FixedBackOff;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -24,6 +27,9 @@ public class KafkaConsumerConfig {
     @Value("${spring.kafka.consumer.group-id}")
     private String groupId;
 
+    @Value("${kafka.topics.dlq}")
+    private String dlqTopic;
+
     @Bean
     public ConsumerFactory<String, Object> consumerFactory() {
         JsonDeserializer<Object> deserializer = new JsonDeserializer<>(Object.class);
@@ -37,15 +43,36 @@ public class KafkaConsumerConfig {
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+        // Increase max.poll.interval.ms programmatically as well to be safe
+        props.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, 900000); 
 
         return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, Object> kafkaListenerContainerFactory() {
+    public DefaultErrorHandler errorHandler(org.springframework.kafka.core.KafkaTemplate<String, Object> kafkaTemplate) {
+        DeadLetterPublishingRecoverer recoverer =
+            new DeadLetterPublishingRecoverer(
+                kafkaTemplate,
+                (r, e) -> new org.apache.kafka.common.TopicPartition(dlqTopic, r.partition())
+            );
+
+        FixedBackOff backOff = new FixedBackOff(120000L, 5L);
+
+        DefaultErrorHandler errorHandler = new DefaultErrorHandler(recoverer, backOff);
+        
+        // You can configure which exceptions to retry, by default it retries all except some fatal ones
+        // errorHandler.addRetryableExceptions(RuntimeException.class);
+        
+        return errorHandler;
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, Object> kafkaListenerContainerFactory(DefaultErrorHandler errorHandler) {
         ConcurrentKafkaListenerContainerFactory<String, Object> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
+        factory.setCommonErrorHandler(errorHandler); // Apply error handler
         return factory;
     }
 }

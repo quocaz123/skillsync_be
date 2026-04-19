@@ -27,4 +27,15 @@ public class ReportResponse {
     String adminNotes;
     LocalDateTime resolvedAt;
     LocalDateTime createdAt;
+
+    // Session Logs
+    LocalDateTime sessionStartedAt;
+    LocalDateTime sessionEndedAt;
+    LocalDateTime teacherLeftAt;
+    LocalDateTime learnerLeftAt;
+
+    // Counter Evidence
+    String counterDescription;
+    String counterEvidenceUrl;
+    LocalDateTime counterSubmittedAt;
 }

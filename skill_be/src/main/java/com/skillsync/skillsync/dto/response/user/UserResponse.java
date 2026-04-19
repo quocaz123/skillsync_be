@@ -32,7 +32,6 @@ public class UserResponse {
     Integer creditsBalance;
     Integer pendingLearnerCredits;
     Integer pendingTeacherCredits;
-    Integer trustScore;
 
     // ─── Statistics (aggregated) ─────────────────────────────
     Long totalTeachingSessions;
@@ -42,19 +41,4 @@ public class UserResponse {
 
     // ─── Teaching skills count ───────────────────────────────
     Long totalTeachingSkills;
-
-    // ─── Learning interests ───────────────────────────────────
-    List<LearningInterestSummary> learningInterests;
-
-    // ─── Nested DTO ───────────────────────────────────────────
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class LearningInterestSummary {
-        String skillName;
-        String skillIcon;
-        String desiredLevel;   // SkillLevel enum as string
-        String learningGoal;
-    }
 }

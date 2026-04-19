@@ -44,10 +44,17 @@ public class AdminReportController {
                 .reason(report.getReason())
                 .description(report.getDescription())
                 .evidenceUrl(report.getEvidenceUrl())
+                .counterDescription(report.getCounterDescription())
+                .counterEvidenceUrl(report.getCounterEvidenceUrl())
+                .counterSubmittedAt(report.getCounterSubmittedAt())
                 .status(report.getStatus())
                 .adminNotes(report.getAdminNotes())
                 .resolvedAt(report.getResolvedAt())
                 .createdAt(report.getCreatedAt())
+                .sessionStartedAt(report.getSession().getStartedAt())
+                .sessionEndedAt(report.getSession().getEndedAt())
+                .teacherLeftAt(report.getSession().getTeacherLeftAt())
+                .learnerLeftAt(report.getSession().getLearnerLeftAt())
                 .build();
     }
 }

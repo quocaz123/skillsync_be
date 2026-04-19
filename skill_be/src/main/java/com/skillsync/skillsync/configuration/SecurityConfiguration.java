@@ -27,7 +27,10 @@ public class SecurityConfiguration {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/register", "/auth/login", "/auth/google", "/auth/google/exchange",
-                                "/auth/refresh")
+                                "/auth/refresh",
+                                // Chưa có JWT sau đăng ký / quên mật khẩu — phải public
+                                "/auth/verify-email", "/auth/resend-verification",
+                                "/auth/forgot-password", "/auth/reset-password")
                         .permitAll()
                         .requestMatchers("/auth/logout").permitAll()
                         .requestMatchers("/ws/**").permitAll()

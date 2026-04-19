@@ -54,13 +54,17 @@ google:
   client-id: ${GOOGLE_CLIENT_ID}
   client-secret: ${GOOGLE_CLIENT_SECRET}
 
-aws:
-  access-key: ${AWS_ACCESS_KEY}
-  secret-key: ${AWS_SECRET_KEY}
-  region: ${AWS_REGION:ap-southeast-1}
-  s3:
-    bucket-name: ${AWS_S3_BUCKET}
-    public-base-url: ${AWS_S3_PUBLIC_URL}
+# R2: endpoint = API S3-compatible (presign, PUT). public-base-url = URL hiển thị trong browser.
+# CLOUDFLARE_R2_PUBLIC_URL phải là Public bucket URL dạng https://pub-xxxxx.r2.dev
+# (hoặc custom domain đã gắn bucket). Không dùng https://<account>.r2.cloudflarestorage.com làm public URL.
+cloudflare:
+  r2:
+    access-key: ${CLOUDFLARE_R2_ACCESS_KEY}
+    secret-key: ${CLOUDFLARE_R2_SECRET_KEY}
+    region: ${CLOUDFLARE_R2_REGION:auto}
+    endpoint: ${CLOUDFLARE_R2_ENDPOINT_URL}
+    bucket-name: ${CLOUDFLARE_R2_BUCKET}
+    public-base-url: ${CLOUDFLARE_R2_PUBLIC_URL}
 
 # ── Gemini (Google AI Studio — REST, không cần Spring AI) ──
 # gemini-2.0-flash-lite: 30 RPM, 1500 RPD (free tier)

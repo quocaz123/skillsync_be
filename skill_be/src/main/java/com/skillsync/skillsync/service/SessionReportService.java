@@ -136,6 +136,27 @@ public class SessionReportService {
             }
         }
 
+        // Update Penalties based on Resolution
+        if (resolution == ReportStatus.RESOLVED) {
+            // Reporter wins, ReportedUser loses
+            if (report.getReportedUser() != null) {
+                User loser = report.getReportedUser();
+                loser.setViolationCount(loser.getViolationCount() != null ? loser.getViolationCount() + 1 : 1);
+                if (loser.getViolationCount() >= 3) {
+                    loser.setStatus(com.skillsync.skillsync.enums.UserStatus.BANNED);
+                }
+                userRepository.save(loser);
+            }
+        } else if (resolution == ReportStatus.REJECTED) {
+            // ReportedUser wins, Reporter loses (False alarm)
+            User loser = report.getReporter();
+            loser.setViolationCount(loser.getViolationCount() != null ? loser.getViolationCount() + 1 : 1);
+            if (loser.getViolationCount() >= 3) {
+                loser.setStatus(com.skillsync.skillsync.enums.UserStatus.BANNED);
+            }
+            userRepository.save(loser);
+        }
+
         report.setStatus(resolution);
         report.setAdminNotes(adminNotes);
         report.setResolvedBy(admin);
@@ -150,5 +171,26 @@ public class SessionReportService {
             throw new AppException(ErrorCode.NOT_FOUND);
         }
         return reports.get(0); // Return the first/latest report
+    }
+
+    @Transactional
+    public SessionReport submitCounterEvidence(UUID reportId, String description, String evidenceUrl) {
+        User reportedUser = userService.getCurrentUser();
+        SessionReport report = reportRepository.findById(reportId)
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND));
+
+        if (report.getStatus() != ReportStatus.PENDING) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        if (report.getReportedUser() == null || !report.getReportedUser().getId().equals(reportedUser.getId())) {
+            throw new AppException(ErrorCode.FORBIDDEN);
+        }
+
+        report.setCounterDescription(description);
+        report.setCounterEvidenceUrl(evidenceUrl);
+        report.setCounterSubmittedAt(LocalDateTime.now());
+
+        return reportRepository.save(report);
     }
 }
