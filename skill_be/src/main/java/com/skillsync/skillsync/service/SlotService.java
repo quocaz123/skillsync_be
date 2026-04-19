@@ -12,10 +12,12 @@ import com.skillsync.skillsync.repository.SessionRepository;
 import com.skillsync.skillsync.repository.TeachingSlotRepository;
 import com.skillsync.skillsync.repository.UserTeachingSkillRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -25,6 +27,9 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class SlotService {
+
+    @Value("${app.timezone:Asia/Ho_Chi_Minh}")
+    private String appTimezone;
 
     private final TeachingSlotRepository slotRepository;
     private final UserTeachingSkillRepository teachingSkillRepository;
@@ -94,7 +99,13 @@ public class SlotService {
             java.time.LocalTime start = entry.getTime();
             java.time.LocalTime end = normalizeEndTime(entry.getTime(), entry.getEndTime());
             if (!end.isAfter(start)) {
-                throw new AppException(ErrorCode.INVALID_REQUEST);
+                throw new AppException(ErrorCode.SLOT_INVALID_TIME_RANGE);
+            }
+
+            ZoneId zone = ZoneId.of(appTimezone);
+            ZonedDateTime slotStartZ = ZonedDateTime.of(entry.getDate(), start, zone);
+            if (!slotStartZ.isAfter(ZonedDateTime.now(zone))) {
+                throw new AppException(ErrorCode.SLOT_IN_THE_PAST);
             }
 
             // Check overlap với slot hiện có + những slot sẽ tạo trong batch (cùng ngày)

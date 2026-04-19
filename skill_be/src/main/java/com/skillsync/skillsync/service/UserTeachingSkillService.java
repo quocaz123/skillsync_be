@@ -54,6 +54,7 @@ public class UserTeachingSkillService {
     }
 
     /** Public — APPROVED và chưa bị mentor tạm ẩn (Explore / AI), không lọc phân trang */
+    @Transactional(readOnly = true)
     public List<TeachingSkillResponse> getApprovedTeachingSkills() {
         List<UserTeachingSkill> skills = teachingSkillRepository
                 .findByVerificationStatusAndHiddenFalse(VerificationStatus.APPROVED);
@@ -65,6 +66,7 @@ public class UserTeachingSkillService {
      *
      * @param sort {@code newest} | {@code credits_asc} | {@code credits_desc} | {@code experience}
      */
+    @Transactional(readOnly = true)
     public PageResponse<TeachingSkillResponse> exploreTeachingSkills(
             String q,
             UUID skillId,
@@ -99,7 +101,7 @@ public class UserTeachingSkillService {
                     .sorted(Comparator.comparingLong((UserTeachingSkill uts) -> {
                         TeachingSlotRepository.TeachingSkillStats st = statsMap.get(uts.getId());
                         return st != null && st.getTotalSessions() != null ? st.getTotalSessions() : 0L;
-                    }).reversed())
+                    }).reversed().thenComparing(uts -> uts.getCreatedAt(), Comparator.nullsLast(Comparator.reverseOrder())))
                     .toList();
 
             long total = sorted.size();

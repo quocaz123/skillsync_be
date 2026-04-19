@@ -4,6 +4,10 @@ server:
     context-path: /skillsync
 
 spring:
+  jackson:
+    # Cùng múi với logic slot / học viên VN (tránh so sánh LocalDateTime theo UTC máy chủ).
+    time-zone: Asia/Ho_Chi_Minh
+
   datasource:
     url: ${DB_URL}
     username: ${DB_USER}
@@ -46,6 +50,9 @@ jwt:
   secret: ${JWT_SECRET:}
 
 app:
+  # Múi giờ khi đánh giá “slot còn trong tương lai hay không” (ngày + giờ do client gửi là giờ địa phương).
+  timezone: ${APP_TIMEZONE:Asia/Ho_Chi_Minh}
+
   cookie:
     secure: false
     same-site: Lax
