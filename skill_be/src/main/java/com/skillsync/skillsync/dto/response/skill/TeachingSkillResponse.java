@@ -34,6 +34,8 @@ public class TeachingSkillResponse {
     
     Long openSlotsCount;
     Long totalSessions;
+    Integer totalReviews;
+    Double averageRating;
     
     
     // Teacher details for explore page

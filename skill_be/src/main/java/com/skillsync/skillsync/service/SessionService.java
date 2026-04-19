@@ -707,6 +707,7 @@ public class SessionService {
                 .teachingSkillId(s.getTeachingSkill() != null ? s.getTeachingSkill().getId() : null)
                 .skillName(s.getTeachingSkill() != null ? s.getTeachingSkill().getSkill().getName() : null)
                 .skillIcon(s.getTeachingSkill() != null ? s.getTeachingSkill().getSkill().getIcon() : null)
+                .skillLevel(s.getTeachingSkill() != null ? s.getTeachingSkill().getLevel().toString() : null)
                 .learnerNotes(s.getLearnerNotes())
                 .startedAt(s.getStartedAt())
                 .endedAt(s.getEndedAt())
