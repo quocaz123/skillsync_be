@@ -44,6 +44,10 @@ public class AuthService {
     final PasswordEncoder passwordEncoder;
     final ObjectMapper objectMapper;
     final NotificationEventPublisher notificationEventPublisher;
+    final org.springframework.data.redis.core.RedisTemplate<String, com.skillsync.skillsync.dto.request.auth.RedisAuthState> redisAuthStateTemplate;
+
+    static final String REDIS_REG_PREFIX = "pending_reg:";
+
 
     @Value("${google.client-id:}")
     String googleClientId;
@@ -52,38 +56,40 @@ public class AuthService {
     String googleClientSecret;
 
     public AuthenticationResponse register(AuthenticationRequest request) {
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+        // 1. Kiểm tra xem email đã tồn tại và ĐÃ XÁC THỰC chưa
+        var existingUser = userRepository.findByEmail(request.getEmail());
+        if (existingUser.isPresent() && Boolean.TRUE.equals(existingUser.get().getIsEmailVerified())) {
             throw new AppException(ErrorCode.USER_EXISTS);
         }
 
-        User user = userMapper.toUser(request);
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(Role.USER);
-
-        // Set display name: use provided fullName, else derive from email
+        // 2. Chuẩn bị thông tin đăng ký (không lưu DB vội)
         String fullName = (request.getFullName() != null && !request.getFullName().isBlank())
                 ? request.getFullName().trim()
                 : request.getEmail().split("@")[0];
-        user.setFullName(fullName);
 
-        // Sinh mã OTP 6 số ngẫu nhiên
+        // Sinh mã OTP 6 số
         String otpCode = String.format("%06d", new java.util.Random().nextInt(999999));
-        user.setOtpCode(otpCode);
-        user.setOtpExpiryTime(java.time.LocalDateTime.now().plusMinutes(AuthConstants.OTP_VALID_MINUTES));
-        user.setIsEmailVerified(false);
 
-        userRepository.save(user);
+        com.skillsync.skillsync.dto.request.auth.RedisAuthState state = com.skillsync.skillsync.dto.request.auth.RedisAuthState.builder()
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .fullName(fullName)
+                .otpCode(otpCode)
+                .createdAt(java.time.LocalDateTime.now())
+                .build();
 
-        // Publish VERIFY_ACCOUNT email event 
-        notificationEventPublisher.publishVerifyAccount(user.getEmail(), user.getFullName(), otpCode);
-        log.info("[AuthService] Published VERIFY_ACCOUNT event for new user: {}", user.getEmail());
+        // 3. Lưu vào Redis với TTL (15 phút)
+        String redisKey = REDIS_REG_PREFIX + request.getEmail();
+        redisAuthStateTemplate.opsForValue().set(redisKey, state, java.time.Duration.ofMinutes(AuthConstants.OTP_VALID_MINUTES));
 
-        // Do not return tokens yet
+        // 4. Gửi email xác thực
+        notificationEventPublisher.publishVerifyAccount(request.getEmail(), fullName, otpCode);
+        log.info("[AuthService] Registration pending in Redis for: {}", request.getEmail());
+
         return AuthenticationResponse.builder()
-                .userId(user.getId() != null ? user.getId().toString() : null)
-                .email(user.getEmail())
-                .fullName(user.getFullName())
-                .role(user.getRole().name())
+                .email(request.getEmail())
+                .fullName(fullName)
+                .role(Role.USER.name())
                 .build();
     }
 
@@ -242,45 +248,73 @@ public class AuthService {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
-    /** Xác minh email — không phát hành phiên đăng nhập; người dùng đăng nhập thủ công sau đó. */
+    /** Xác minh email — Dữ liệu lấy từ Redis, nếu ok mới lưu vào DB */
     public void verifyEmail(String email, String otpCode) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        String redisKey = REDIS_REG_PREFIX + email;
+        com.skillsync.skillsync.dto.request.auth.RedisAuthState state = redisAuthStateTemplate.opsForValue().get(redisKey);
 
-        if (Boolean.TRUE.equals(user.getIsEmailVerified())) {
-            return;
-        }
+        // Nếu không có trong Redis, có thể là đã xác thực rồi hoặc hết hạn
+        if (state == null) {
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new AppException(ErrorCode.OTP_EXPIRED)); 
 
-        if (user.getOtpCode() == null || !user.getOtpCode().equals(otpCode)) {
-            throw new AppException(ErrorCode.INVALID_OTP);
-        }
-
-        if (user.getOtpExpiryTime() != null && user.getOtpExpiryTime().isBefore(java.time.LocalDateTime.now())) {
+            if (Boolean.TRUE.equals(user.getIsEmailVerified())) {
+                return; // Đã xác thực xong từ trước
+            }
             throw new AppException(ErrorCode.OTP_EXPIRED);
         }
 
+        // Kiểm tra OTP
+        if (!state.getOtpCode().equals(otpCode)) {
+            throw new AppException(ErrorCode.INVALID_OTP);
+        }
+
+        // OTP OK -> Tạo User chính thức
+        User user = new User();
+        user.setEmail(state.getEmail());
+        user.setPassword(state.getPassword()); // password đã được encode lúc register
+        user.setFullName(state.getFullName());
+        user.setRole(Role.USER);
         user.setIsEmailVerified(true);
-        user.setOtpCode(null);
-        user.setOtpExpiryTime(null);
+        user.setHasPassword(true);
+        
         userRepository.save(user);
 
+        // Xóa khỏi Redis
+        redisAuthStateTemplate.delete(redisKey);
+
         notificationEventPublisher.publishWelcome(user.getEmail(), user.getFullName());
+        log.info("[AuthService] User verified and saved to DB: {}", email);
     }
 
     public void resendOTP(String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        String redisKey = REDIS_REG_PREFIX + email;
+        com.skillsync.skillsync.dto.request.auth.RedisAuthState state = redisAuthStateTemplate.opsForValue().get(redisKey);
 
-        if (Boolean.TRUE.equals(user.getIsEmailVerified())) {
-            return; // Already verified
+        if (state == null) {
+            // Có thể là email đã trong DB nhưng chưa verified (từ hệ thống cũ)
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+            
+            if (Boolean.TRUE.equals(user.getIsEmailVerified())) return;
+
+            // Chuyển info từ DB sang Redis để đồng bộ luồng mới
+            state = com.skillsync.skillsync.dto.request.auth.RedisAuthState.builder()
+                    .email(user.getEmail())
+                    .password(user.getPassword())
+                    .fullName(user.getFullName())
+                    .build();
         }
 
         String otpCode = String.format("%06d", new java.util.Random().nextInt(999999));
-        user.setOtpCode(otpCode);
-        user.setOtpExpiryTime(java.time.LocalDateTime.now().plusMinutes(AuthConstants.OTP_VALID_MINUTES));
-        userRepository.save(user);
+        state.setOtpCode(otpCode);
+        state.setCreatedAt(java.time.LocalDateTime.now());
 
-        notificationEventPublisher.publishVerifyAccount(user.getEmail(), user.getFullName(), otpCode);
+        // Cập nhật lại vào Redis (reset TTL 15m)
+        redisAuthStateTemplate.opsForValue().set(redisKey, state, java.time.Duration.ofMinutes(AuthConstants.OTP_VALID_MINUTES));
+
+        notificationEventPublisher.publishVerifyAccount(state.getEmail(), state.getFullName(), otpCode);
+        log.info("[AuthService] Resent OTP via Redis for: {}", email);
     }
 
     public void forgotPassword(String email) {

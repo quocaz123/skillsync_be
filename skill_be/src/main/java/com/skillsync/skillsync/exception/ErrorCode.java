@@ -21,6 +21,10 @@ public enum ErrorCode {
     INVALID_GOOGLE_TOKEN(401, "Invalid Google token", HttpStatus.UNAUTHORIZED),
     SLOT_ALREADY_BOOKED(409, "Slot is no longer available", HttpStatus.CONFLICT),
     SLOT_TIME_CONFLICT(409, "Slot time conflicts with an existing slot", HttpStatus.CONFLICT),
+    /** Giờ kết thúc phải sau giờ bắt đầu (cùng ngày). */
+    SLOT_INVALID_TIME_RANGE(400, "Giờ kết thúc phải sau giờ bắt đầu.", HttpStatus.BAD_REQUEST),
+    /** Thời điểm bắt đầu slot phải nằm trong tương lai. */
+    SLOT_IN_THE_PAST(400, "Không thể tạo slot trong quá khứ.", HttpStatus.BAD_REQUEST),
     SESSION_TIME_CONFLICT(409, "This slot overlaps with one of your existing sessions", HttpStatus.CONFLICT),
     INSUFFICIENT_CREDITS(402, "Insufficient credits balance", HttpStatus.PAYMENT_REQUIRED),
     TOO_EARLY_TO_JOIN(400, "Session has not started yet (join 10 mins before)", HttpStatus.BAD_REQUEST),
