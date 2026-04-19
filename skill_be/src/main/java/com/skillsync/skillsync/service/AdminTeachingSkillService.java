@@ -23,6 +23,7 @@ public class AdminTeachingSkillService {
     private final UserTeachingSkillRepository teachingSkillRepository;
     private final TeachingSkillEvidenceRepository evidenceRepository;
     private final UserService userService;
+    private final NotificationEventPublisher notificationEventPublisher;
 
     /** Lấy tất cả teaching skills, lọc theo status nếu có */
     public List<AdminTeachingSkillResponse> getAll(VerificationStatus status) {
@@ -56,6 +57,20 @@ public class AdminTeachingSkillService {
         ts.setRejectionReason("REJECTED".equalsIgnoreCase(request.getAction())
                 ? request.getRejectionReason()
                 : null);
+
+        if ("APPROVED".equalsIgnoreCase(request.getAction())) {
+            notificationEventPublisher.publishSkillEvent("SKILL_VERIFIED",
+                    ts.getUser().getEmail(),
+                    ts.getUser().getFullName(),
+                    ts.getSkill().getName(),
+                    null);
+        } else {
+            notificationEventPublisher.publishSkillEvent("SKILL_REJECTED",
+                    ts.getUser().getEmail(),
+                    ts.getUser().getFullName(),
+                    ts.getSkill().getName(),
+                    request.getRejectionReason());
+        }
 
         return toResponse(teachingSkillRepository.save(ts));
     }

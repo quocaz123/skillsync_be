@@ -12,6 +12,9 @@ public enum ErrorCode {
     INVALID_TOKEN(401, "Invalid or expired token", HttpStatus.UNAUTHORIZED),
     UNAUTHORIZED(401, "Unauthorized access", HttpStatus.UNAUTHORIZED),
     FORBIDDEN(403, "Access denied", HttpStatus.FORBIDDEN),
+    UNVERIFIED_ACCOUNT(403, "Account is not verified. Please verify your email.", HttpStatus.FORBIDDEN),
+    INVALID_OTP(400, "Invalid verification code", HttpStatus.BAD_REQUEST),
+    OTP_EXPIRED(400, "Verification code has expired", HttpStatus.BAD_REQUEST),
     NOT_FOUND(404, "Resource not found", HttpStatus.NOT_FOUND),
     INTERNAL_SERVER_ERROR(500, "Internal server error", HttpStatus.INTERNAL_SERVER_ERROR),
     INVALID_REQUEST(400, "Invalid request parameters", HttpStatus.BAD_REQUEST),
@@ -23,6 +26,7 @@ public enum ErrorCode {
     TOO_EARLY_TO_JOIN(400, "Session has not started yet (join 10 mins before)", HttpStatus.BAD_REQUEST),
     SESSION_EXPIRED(400, "Session join window has expired", HttpStatus.BAD_REQUEST),
     SKILL_NOT_FOUND(404, "Teaching skill not found", HttpStatus.NOT_FOUND),
+    TEACHING_SKILL_NOT_ACCEPTING(403, "This teaching skill is paused and not accepting new bookings", HttpStatus.FORBIDDEN),
     SESSION_ALREADY_DECIDED(409, "Session has already been approved or rejected", HttpStatus.CONFLICT),
     NOT_SESSION_TEACHER(403, "You are not the teacher of this session", HttpStatus.FORBIDDEN)
     ;

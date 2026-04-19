@@ -45,6 +45,15 @@ public class SessionReport {
     @Column(name = "evidence_url", length = 500)
     String evidenceUrl;
 
+    @Column(name = "counter_description", columnDefinition = "TEXT")
+    String counterDescription;
+
+    @Column(name = "counter_evidence_url", length = 500)
+    String counterEvidenceUrl;
+
+    @Column(name = "counter_submitted_at")
+    LocalDateTime counterSubmittedAt;
+
     @Builder.Default
     @Enumerated(EnumType.STRING)
     ReportStatus status = ReportStatus.PENDING;

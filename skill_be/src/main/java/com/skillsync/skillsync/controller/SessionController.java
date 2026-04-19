@@ -2,6 +2,7 @@ package com.skillsync.skillsync.controller;
 
 import com.skillsync.skillsync.dto.common.ApiResponse;
 import com.skillsync.skillsync.dto.request.session.BookSessionRequest;
+import com.skillsync.skillsync.dto.request.session.ProposeSessionRequest;
 import com.skillsync.skillsync.dto.response.session.SessionResponse;
 import com.skillsync.skillsync.dto.response.session.ZegoTokenResponse;
 import com.skillsync.skillsync.service.SessionService;
@@ -25,6 +26,15 @@ public class SessionController {
     @PostMapping("/book")
     public ApiResponse<SessionResponse> book(@RequestBody BookSessionRequest request) {
         return ApiResponse.success(sessionService.book(request));
+    }
+
+    /**
+     * POST /api/sessions/propose
+     * Learner tự đề xuất lịch học (On-Demand Booking)
+     */
+    @PostMapping("/propose")
+    public ApiResponse<SessionResponse> propose(@RequestBody ProposeSessionRequest request) {
+        return ApiResponse.success(sessionService.proposeSession(request));
     }
 
     /**

@@ -24,10 +24,10 @@ public class FileUploadService {
     private final S3Presigner s3Presigner;
     private final S3Client s3Client;
 
-    @Value("${aws.s3.bucket-name}")
+    @Value("${cloudflare.r2.bucket-name}")
     private String bucketName;
 
-    @Value("${aws.s3.public-base-url}")
+    @Value("${cloudflare.r2.public-base-url}")
     private String publicBaseUrl;
 
     private static final long EXPIRES_IN_SECONDS = 300L;

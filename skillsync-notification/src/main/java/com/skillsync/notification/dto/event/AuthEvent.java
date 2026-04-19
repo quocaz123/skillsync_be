@@ -25,4 +25,7 @@ public class AuthEvent {
 
     /** Thời điểm sự kiện xảy ra (ISO-8601 string) */
     String timestamp;
+
+    /** Mã OTP phục vụ Verify Account hoặc Forgot Password */
+    String otpCode;
 }

@@ -8,5 +8,6 @@ import java.util.UUID;
 
 public interface TeachingSkillEvidenceRepository extends JpaRepository<TeachingSkillEvidence, UUID> {
     List<TeachingSkillEvidence> findByTeachingSkillId(UUID teachingSkillId);
+    List<TeachingSkillEvidence> findByTeachingSkillIdIn(List<UUID> skillIds);
     void deleteByTeachingSkillId(UUID teachingSkillId);
 }

@@ -6,7 +6,9 @@ import com.skillsync.skillsync.enums.VerificationStatus;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
+import com.skillsync.skillsync.dto.response.review.ReviewResponse;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -26,12 +28,22 @@ public class TeachingSkillResponse {
     String teachingStyle;
     Integer creditsPerHour;
     VerificationStatus verificationStatus;
+    String rejectionReason;
+    /** true = mentor tạm ẩn — không Explore/AI, không nhận booking mới */
+    Boolean hidden;
+    
+    Long openSlotsCount;
+    Long totalSessions;
+    
     
     // Teacher details for explore page
     UUID teacherId;
     String teacherName;
     String teacherAvatar;
     String teacherBio;
+    
+    List<EvidenceResponse> evidences;
+    List<ReviewResponse> reviews;
     
     LocalDateTime createdAt;
 }

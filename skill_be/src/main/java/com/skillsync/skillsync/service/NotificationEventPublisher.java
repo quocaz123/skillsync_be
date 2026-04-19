@@ -54,6 +54,29 @@ public class NotificationEventPublisher {
         sendSafely(authTopic, email, event, "WELCOME");
     }
 
+    public void publishVerifyAccount(String email, String fullName, String otpCode) {
+        Map<String, Object> event = new HashMap<>();
+        event.put("eventType", "VERIFY_ACCOUNT");
+        event.put("recipientEmail", email);
+        event.put("recipientName", fullName);
+        event.put("otpCode", otpCode);
+        event.put("timestamp", LocalDateTime.now().toString());
+
+        sendSafely(authTopic, email, event, "VERIFY_ACCOUNT");
+    }
+
+    /** Đặt lại hoặc thiết lập mật khẩu lần đầu (OTP) — eventType RESET_PASSWORD cho notification service. */
+    public void publishForgotPassword(String email, String fullName, String otpCode) {
+        Map<String, Object> event = new HashMap<>();
+        event.put("eventType", "RESET_PASSWORD");
+        event.put("recipientEmail", email);
+        event.put("recipientName", fullName);
+        event.put("otpCode", otpCode);
+        event.put("timestamp", LocalDateTime.now().toString());
+
+        sendSafely(authTopic, email, event, "RESET_PASSWORD");
+    }
+
     // ── SESSION Events ────────────────────────────────────────────────────────
 
     /**

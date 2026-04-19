@@ -17,6 +17,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
+import com.skillsync.skillsync.dto.request.auth.ForgotPasswordRequest;
+import com.skillsync.skillsync.dto.request.auth.ResetPasswordRequest;
+import com.skillsync.skillsync.dto.request.auth.VerifyEmailRequest;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -36,6 +39,34 @@ public class AuthController {
 
         UserAuthResponse userAuthResponse = mapToUserAuthResponse(auth);
         return ApiResponse.success(userAuthResponse);
+    }
+
+    @PostMapping("/verify-email")
+    public ApiResponse<UserAuthResponse> verifyEmail(@RequestBody VerifyEmailRequest request,
+            HttpServletResponse response) {
+        AuthenticationResponse auth = authService.verifyEmail(request.getEmail(), request.getOtpCode());
+        cookieService.setAuthCookies(response, auth);
+
+        UserAuthResponse userAuthResponse = mapToUserAuthResponse(auth);
+        return ApiResponse.success(userAuthResponse);
+    }
+
+    @PostMapping("/resend-verification")
+    public ApiResponse<Void> resendVerification(@RequestBody ForgotPasswordRequest request) {
+        authService.resendOTP(request.getEmail());
+        return ApiResponse.success(null);
+    }
+
+    @PostMapping("/forgot-password")
+    public ApiResponse<Void> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        authService.forgotPassword(request.getEmail());
+        return ApiResponse.success(null);
+    }
+
+    @PostMapping("/reset-password")
+    public ApiResponse<Void> resetPassword(@RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request.getEmail(), request.getOtpCode(), request.getNewPassword());
+        return ApiResponse.success(null);
     }
 
     @PostMapping("/login")

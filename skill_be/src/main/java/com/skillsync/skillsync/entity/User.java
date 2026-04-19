@@ -54,9 +54,20 @@ public class User {
     @Column(name = "credits_balance")
     Integer creditsBalance = 50;
 
+
     @Builder.Default
-    @Column(name = "trust_score")
-    Integer trustScore = 50;
+    @Column(name = "violation_count")
+    Integer violationCount = 0;
+
+    @Builder.Default
+    @Column(name = "is_email_verified", nullable = false)
+    Boolean isEmailVerified = false;
+
+    @Column(name = "otp_code", length = 6)
+    String otpCode;
+
+    @Column(name = "otp_expiry_time")
+    LocalDateTime otpExpiryTime;
 
     @Column(columnDefinition = "TEXT")
     String bio;

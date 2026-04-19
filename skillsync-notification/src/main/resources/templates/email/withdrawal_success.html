@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Withdrawal Success</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+        <h2 style="color: #2196F3;">💸 Rút tiền thành công!</h2>
+        <p>Chào <span th:text="${recipientName}">Bạn</span>,</p>
+        <p>Yêu cầu rút tiền của bạn đã được xử lý thành công với số tiền: <strong th:text="${amount}" style="color: #2196F3;">0</strong>.</p>
+        <p><strong>Số dư còn lại:</strong> <span th:text="${balance}">0</span></p>
+        <p>Số tiền đang được chuyển vào tài khoản ngân hàng của bạn. Vui lòng kiểm tra tài khoản ngân hàng trong vòng 24h tới.</p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+        <p style="font-size: 0.9em; color: #888;">Từ đội ngũ SkillSync</p>
+    </div>
+</body>
+</html>
