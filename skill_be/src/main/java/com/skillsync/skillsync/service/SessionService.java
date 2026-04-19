@@ -197,7 +197,7 @@ public class SessionService {
                 .slotTime(slotStart)
                 .slotEndTime(slotEnd)
                 .creditCost(cost)
-                .status(SlotStatus.BOOKED) // Tự sinh nên ẩn khỏi danh sách OPEN
+                .status(SlotStatus.PENDING) // Đổi sang PENDING thay vì BOOKED ngay lập tức
                 .build();
         generatedSlot = slotRepository.save(generatedSlot);
 
@@ -371,6 +371,13 @@ public class SessionService {
 
         session.setStatus(SessionStatus.CANCELLED);
         sessionRepository.save(session);
+
+        // Nếu slot này là PENDING (do đề xuất), chuyển sang CANCELLED
+        TeachingSlot slot = session.getSlot();
+        if (slot != null && slot.getStatus() == SlotStatus.PENDING) {
+            slot.setStatus(SlotStatus.CANCELLED);
+            slotRepository.save(slot);
+        }
 
         // Thông báo Learner bị từ chối
         notificationService.createAndSend(NotificationCreateRequest.builder()
