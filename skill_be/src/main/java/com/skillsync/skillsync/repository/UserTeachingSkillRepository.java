@@ -6,6 +6,8 @@ import com.skillsync.skillsync.entity.User;
 import com.skillsync.skillsync.enums.SkillLevel;
 import com.skillsync.skillsync.enums.VerificationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 import java.util.List;
@@ -23,4 +25,15 @@ public interface UserTeachingSkillRepository extends JpaRepository<UserTeachingS
     Optional<UserTeachingSkill> findByUserAndSkillAndLevel(User user, Skill skill, SkillLevel level);
 
     boolean existsByUserIdAndSkillIdAndLevel(UUID userId, UUID skillId, com.skillsync.skillsync.enums.SkillLevel level);
+
+    @Query("""
+            SELECT uts FROM UserTeachingSkill uts
+            JOIN FETCH uts.user u
+            JOIN FETCH uts.skill s
+            WHERE uts.verificationStatus = :status
+            AND LOWER(s.name) IN :skillNames
+            ORDER BY uts.createdAt DESC
+            """)
+    List<UserTeachingSkill> findApprovedBySkillNames(@Param("skillNames") List<String> skillNames,
+                                                     @Param("status") VerificationStatus status);
 }
