@@ -33,20 +33,19 @@ public final class UserTeachingSkillExploreSpec {
             parts.add(cb.equal(root.get("verificationStatus"), VerificationStatus.APPROVED));
             parts.add(cb.isFalse(root.get("hidden")));
 
-            Join<Object, Object> skillJoin = root.join("skill", JoinType.INNER);
-            Join<Object, Object> userJoin = root.join("user", JoinType.INNER);
+            // Let lazy loading and @Transactional handle associations safely!
 
             if (skillId != null) {
-                parts.add(cb.equal(skillJoin.get("id"), skillId));
+                parts.add(cb.equal(root.get("skill").get("id"), skillId));
             }
             if (category != null) {
-                parts.add(cb.equal(skillJoin.get("category"), category));
+                parts.add(cb.equal(root.get("skill").get("category"), category));
             }
             if (q != null && !q.isBlank()) {
                 String pattern = "%" + q.trim().toLowerCase() + "%";
                 parts.add(cb.or(
-                        cb.like(cb.lower(userJoin.get("fullName")), pattern),
-                        cb.like(cb.lower(skillJoin.get("name")), pattern)
+                        cb.like(cb.lower(root.get("user").get("fullName")), pattern),
+                        cb.like(cb.lower(root.get("skill").get("name")), pattern)
                 ));
             }
 
