@@ -197,7 +197,7 @@ public class SessionService {
                 .slotTime(slotStart)
                 .slotEndTime(slotEnd)
                 .creditCost(cost)
-                .status(SlotStatus.BOOKED) // Tự sinh nên ẩn khỏi danh sách OPEN
+                .status(SlotStatus.PENDING) // Đổi sang PENDING thay vì BOOKED ngay lập tức
                 .build();
         generatedSlot = slotRepository.save(generatedSlot);
 
@@ -371,6 +371,13 @@ public class SessionService {
 
         session.setStatus(SessionStatus.CANCELLED);
         sessionRepository.save(session);
+
+        // Nếu slot này là PENDING (do đề xuất), chuyển sang CANCELLED
+        TeachingSlot slot = session.getSlot();
+        if (slot != null && slot.getStatus() == SlotStatus.PENDING) {
+            slot.setStatus(SlotStatus.CANCELLED);
+            slotRepository.save(slot);
+        }
 
         // Thông báo Learner bị từ chối
         notificationService.createAndSend(NotificationCreateRequest.builder()
@@ -700,6 +707,7 @@ public class SessionService {
                 .teachingSkillId(s.getTeachingSkill() != null ? s.getTeachingSkill().getId() : null)
                 .skillName(s.getTeachingSkill() != null ? s.getTeachingSkill().getSkill().getName() : null)
                 .skillIcon(s.getTeachingSkill() != null ? s.getTeachingSkill().getSkill().getIcon() : null)
+                .skillLevel(s.getTeachingSkill() != null ? s.getTeachingSkill().getLevel().toString() : null)
                 .learnerNotes(s.getLearnerNotes())
                 .startedAt(s.getStartedAt())
                 .endedAt(s.getEndedAt())

@@ -36,6 +36,7 @@ public class SessionResponse {
     private UUID teachingSkillId;
     private String skillName;
     private String skillIcon;
+    private String skillLevel;
 
     private String learnerNotes;
     private LocalDateTime startedAt;

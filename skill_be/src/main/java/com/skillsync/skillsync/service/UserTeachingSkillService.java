@@ -175,7 +175,11 @@ public class UserTeachingSkillService {
                             .stream().map(this::evidenceToResponse).toList();
                     List<ReviewResponse> revs = reviewsMap.getOrDefault(ts.getId(), List.of())
                             .stream().map(this::reviewToResponse).toList();
-                    return toResponseFully(ts, stat != null ? stat.getOpenSlots() : 0L, stat != null ? stat.getTotalSessions() : 0L, evs, revs);
+                    
+                    double avg = revs.stream().mapToInt(ReviewResponse::getRating).average().orElse(0.0);
+                    int total = revs.size();
+                    
+                    return toResponseFully(ts, stat != null ? stat.getOpenSlots() : 0L, stat != null ? stat.getTotalSessions() : 0L, evs, revs, total, avg);
                 })
                 .toList();
     }
@@ -289,10 +293,10 @@ public class UserTeachingSkillService {
     private TeachingSkillResponse toResponse(UserTeachingSkill ts) {
         List<EvidenceResponse> evs = evidenceRepository.findByTeachingSkillId(ts.getId())
                 .stream().map(this::evidenceToResponse).toList();
-        return toResponseFully(ts, 0L, 0L, evs, java.util.List.of());
+        return toResponseFully(ts, 0L, 0L, evs, java.util.List.of(), 0, 0.0);
     }
 
-    private TeachingSkillResponse toResponseFully(UserTeachingSkill ts, Long openSlots, Long totalSessions, List<EvidenceResponse> evidences, List<ReviewResponse> reviews) {
+    private TeachingSkillResponse toResponseFully(UserTeachingSkill ts, Long openSlots, Long totalSessions, List<EvidenceResponse> evidences, List<ReviewResponse> reviews, Integer totalReviews, Double averageRating) {
         return TeachingSkillResponse.builder()
                 .id(ts.getId())
                 .skillId(ts.getSkill().getId())
@@ -309,6 +313,8 @@ public class UserTeachingSkillService {
                 .hidden(ts.isHidden())
                 .openSlotsCount(openSlots)
                 .totalSessions(totalSessions)
+                .totalReviews(totalReviews)
+                .averageRating(averageRating)
                 .teacherId(ts.getUser().getId())
                 .teacherName(ts.getUser().getFullName())
                 .teacherAvatar(ts.getUser().getAvatarUrl())
