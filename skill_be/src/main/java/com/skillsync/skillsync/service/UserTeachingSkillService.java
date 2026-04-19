@@ -18,6 +18,8 @@ import com.skillsync.skillsync.entity.TeachingSkillEvidence;
 import com.skillsync.skillsync.entity.Review;
 import com.skillsync.skillsync.dto.response.skill.EvidenceResponse;
 import com.skillsync.skillsync.dto.response.review.ReviewResponse;
+import com.skillsync.skillsync.exception.AppException;
+import com.skillsync.skillsync.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -196,8 +198,10 @@ public class UserTeachingSkillService {
         Skill skill = skillRepository.findById(request.getSkillId())
                 .orElseThrow(() -> new RuntimeException("Skill không tồn tại"));
 
-        if (teachingSkillRepository.existsByUserIdAndSkillIdAndLevel(user.getId(), skill.getId(), request.getLevel()))
-            throw new IllegalStateException("Bạn đã đăng ký dạy " + skill.getName() + " ở level này rồi");
+        if (teachingSkillRepository.existsByUserIdAndSkillIdAndLevel(user.getId(), skill.getId(), request.getLevel())) {
+            throw new AppException(ErrorCode.TEACHING_SKILL_DUPLICATE,
+                    "Bạn đã đăng ký dạy " + skill.getName() + " ở level này rồi");
+        }
 
         UserTeachingSkill saved = teachingSkillRepository.save(UserTeachingSkill.builder()
                 .user(user)
@@ -256,8 +260,10 @@ public class UserTeachingSkillService {
         if (!ts.getUser().getId().equals(user.getId()))
             throw new RuntimeException("Bạn không có quyền thay đổi kỹ năng này");
 
-        if (ts.getVerificationStatus() != com.skillsync.skillsync.enums.VerificationStatus.APPROVED)
-            throw new IllegalStateException("Chỉ kỹ năng đã duyệt mới có thể tạm ẩn/hiện");
+        if (ts.getVerificationStatus() != com.skillsync.skillsync.enums.VerificationStatus.APPROVED) {
+            throw new AppException(ErrorCode.INVALID_REQUEST,
+                    "Chỉ kỹ năng đã duyệt mới có thể tạm ẩn/hiện");
+        }
 
         ts.setHidden(!ts.isHidden());
         teachingSkillRepository.save(ts);

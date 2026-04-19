@@ -30,6 +30,8 @@ public enum ErrorCode {
     TOO_EARLY_TO_JOIN(400, "Session has not started yet (join 10 mins before)", HttpStatus.BAD_REQUEST),
     SESSION_EXPIRED(400, "Session join window has expired", HttpStatus.BAD_REQUEST),
     SKILL_NOT_FOUND(404, "Teaching skill not found", HttpStatus.NOT_FOUND),
+    /** Đã có bản ghi dạy cùng skill + level — không tạo trùng. */
+    TEACHING_SKILL_DUPLICATE(409, "Bạn đã đăng ký dạy kỹ năng này ở level này rồi.", HttpStatus.CONFLICT),
     TEACHING_SKILL_NOT_ACCEPTING(403, "This teaching skill is paused and not accepting new bookings", HttpStatus.FORBIDDEN),
     SESSION_ALREADY_DECIDED(409, "Session has already been approved or rejected", HttpStatus.CONFLICT),
     NOT_SESSION_TEACHER(403, "You are not the teacher of this session", HttpStatus.FORBIDDEN)
