@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Booking Cancelled</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+        <h2 style="color: #F44336;">🚫 Hủy phiên học</h2>
+        <p>Chào <span th:text="${recipientName}">Bạn</span>,</p>
+        <p>Rất tiếc phải thông báo rằng phiên học của bạn với <strong th:text="${counterpartName}">đối tác</strong> đã bị hủy.</p>
+        <p><strong>Thời gian dự kiến:</strong> <span th:text="${sessionTime}">thời gian</span></p>
+        <p>Bạn có thể truy cập hệ thống để đặt lịch lại vào thời gian khác.</p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+        <p style="font-size: 0.9em; color: #888;">Từ đội ngũ SkillSync</p>
+    </div>
+</body>
+</html>

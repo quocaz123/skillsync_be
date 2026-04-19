@@ -9,6 +9,11 @@ spring:
     username: ${DB_USER}
     password: ${DB_PASS}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      data-source-properties:
+        # Tránh lỗi PostgreSQL: "cached plan must not change result type"
+        # khi Hibernate ddl-auto=update có thay đổi schema trong lúc app startup.
+        prepareThreshold: 0
 
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
@@ -19,6 +24,14 @@ spring:
       hibernate:
         "[format_sql]": false
         "[jdbc.lob.non_contextual_creation]": true
+
+  # ── Redis — AI session memory ───────────────────────────
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      # password: ${REDIS_PASSWORD:}  # bỏ comment nếu Redis có auth
+      timeout: 2000ms                 # connection timeout
 
   # ── Kafka Producer (Notification Events) ────────────────
   kafka:
@@ -41,13 +54,75 @@ google:
   client-id: ${GOOGLE_CLIENT_ID}
   client-secret: ${GOOGLE_CLIENT_SECRET}
 
-aws:
-  access-key: ${AWS_ACCESS_KEY}
-  secret-key: ${AWS_SECRET_KEY}
-  region: ${AWS_REGION:ap-southeast-1}
-  s3:
-    bucket-name: ${AWS_S3_BUCKET}
-    public-base-url: ${AWS_S3_PUBLIC_URL}
+# R2: endpoint = API S3-compatible (presign, PUT). public-base-url = URL hiển thị trong browser.
+# CLOUDFLARE_R2_PUBLIC_URL phải là Public bucket URL dạng https://pub-xxxxx.r2.dev
+# (hoặc custom domain đã gắn bucket). Không dùng https://<account>.r2.cloudflarestorage.com làm public URL.
+cloudflare:
+  r2:
+    access-key: ${CLOUDFLARE_R2_ACCESS_KEY}
+    secret-key: ${CLOUDFLARE_R2_SECRET_KEY}
+    region: ${CLOUDFLARE_R2_REGION:auto}
+    endpoint: ${CLOUDFLARE_R2_ENDPOINT_URL}
+    bucket-name: ${CLOUDFLARE_R2_BUCKET}
+    public-base-url: ${CLOUDFLARE_R2_PUBLIC_URL}
+
+# ── Gemini (Google AI Studio — REST, không cần Spring AI) ──
+# gemini-2.0-flash-lite: 30 RPM, 1500 RPD (free tier)
+# Retry = 0 → fail-fast, tránh block Tomcat thread 60s.
+# Frontend sẽ retry sau khi nhận 429 response từ server.
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  model: gemini-3.1-flash-lite-preview
+  temperature: 0.2
+  max-output-tokens: 512    # giảm token = tiết kiệm quota
+  retry:
+    max-attempts: 0         # fail-fast khi 429, không block thread
+    initial-delay-ms: 1500  # chỉ dùng nếu max-attempts > 0
+  # ── Embedding ────────────────────────────────────────────────
+  # Dùng bởi SkillEmbeddingService + SkillDataSeeder
+  # gemini-embedding-001        → stable, default 3072 chiều
+  # Lưu ý: HNSW index của pgvector giới hạn <= 2000 chiều
+  # → ta request outputDimensionality thấp hơn (mặc định 1536)
+  embedding-model: gemini-embedding-001
+  embedding-dim: 1536
+
+# ── LM Studio local (OpenAI-like) — giữ lại nhưng tạm không dùng ──
+# Endpoint: POST /v1/chat/completions
+lmstudio:
+  base-url: ${LMSTUDIO_BASE_URL:http://127.0.0.1:1234}
+  model: ${LMSTUDIO_MODEL:qwen2.5:7b}
+  temperature: 0.2
+  timeout-ms: 120000
+  retry:
+    max-attempts: 1
+    initial-delay-ms: 1000
+
+# ── Groq Cloud (OpenAI-compatible — đang dùng) ────────────────────
+# Free tier: 6000 req/day, 30 req/min với llama-3.3-70b-versatile
+# Đăng ký API key tại: https://console.groq.com/keys
+groq:
+  api-key: ${GROQ_API_KEY:}
+  model: llama-3.3-70b-versatile
+  temperature: 0.2
+  max-output-tokens: 768
+
+# ── SkillSync AI tuning ──────────────────────────────────────
+skillsync:
+  ai:
+    # Bật enrich "lý do đề xuất" cho từng mentor (tốn thêm 1 lượt gọi LLM)
+    enrich-reasons-enabled: true
+    # Bật hybrid vector search trong MentorSearchService
+    # Tắt nếu chưa cài pgvector hoặc muốn tiết kiệm Gemini quota
+    vector-search-enabled: true
+    # Cosine similarity tối thiểu — tăng lên 0.80 để tránh Java ↔ JavaScript false-positive
+    vector-search-threshold: 0.80
+    # Nếu alias search cho >= N mentor thì không cần mở rộng bằng vector
+    vector-search-min-primary-results: 3
+    # ── Redis session memory tuning ───────────────────────
+    session:
+      ttl-minutes: 30             # TTL của session trong Redis
+      max-recent-turns: 10        # Giữ tối đa N lượt gần nhất
+      summary-trigger-turns: 6    # Tóm tắt sau mỗi N lượt (3 cặp Q&A)
 
 # ── ZEGO Video Call ─────────────────────────────────────
 zego:

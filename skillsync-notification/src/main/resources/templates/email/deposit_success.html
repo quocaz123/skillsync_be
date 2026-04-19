@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Deposit Success</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+        <h2 style="color: #4CAF50;">💰 Nạp tiền thành công!</h2>
+        <p>Chào <span th:text="${recipientName}">Bạn</span>,</p>
+        <p>Tài khoản của bạn vừa được nạp thành công số tiền: <strong th:text="${amount}" style="color: #4CAF50;">0</strong>.</p>
+        <p><strong>Số dư hiện tại:</strong> <span th:text="${balance}">0</span></p>
+        <p>Cảm ơn bạn đã sử dụng dịch vụ của điểm tín dụng SkillSync.</p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+        <p style="font-size: 0.9em; color: #888;">Từ đội ngũ SkillSync</p>
+    </div>
+</body>
+</html>

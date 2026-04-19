@@ -20,4 +20,9 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
 
     @Query("SELECT COUNT(r) FROM Review r WHERE r.reviewee.id = :userId")
     Long countByRevieweeId(@Param("userId") UUID userId);
+
+    @Query("SELECT r FROM Review r WHERE r.session.teachingSkill.id IN :skillIds " +
+           "AND r.reviewer.id = r.session.learner.id " +
+           "ORDER BY r.createdAt DESC")
+    List<Review> findLearnerReviewsByTeachingSkillIds(@Param("skillIds") List<UUID> skillIds);
 }

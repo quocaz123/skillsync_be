@@ -3,6 +3,7 @@ package com.skillsync.skillsync.controller;
 import com.skillsync.skillsync.dto.common.ApiResponse;
 import com.skillsync.skillsync.dto.request.report.CreateReportRequest;
 import com.skillsync.skillsync.dto.request.report.ResolveReportRequest;
+import com.skillsync.skillsync.dto.request.report.SubmitCounterEvidenceRequest;
 import com.skillsync.skillsync.dto.response.report.ReportResponse;
 import com.skillsync.skillsync.entity.SessionReport;
 import com.skillsync.skillsync.service.SessionReportService;
@@ -43,6 +44,15 @@ public class SessionReportController {
         return ApiResponse.success(toResponse(report));
     }
 
+    @PostMapping("/session/{sessionId}/counter-evidence")
+    public ApiResponse<ReportResponse> submitCounterEvidence(
+            @PathVariable UUID sessionId,
+            @RequestBody SubmitCounterEvidenceRequest request) {
+        SessionReport report = reportService.getReportBySessionId(sessionId);
+        SessionReport updated = reportService.submitCounterEvidence(report.getId(), request.getDescription(), request.getEvidenceUrl());
+        return ApiResponse.success(toResponse(updated));
+    }
+
     private ReportResponse toResponse(SessionReport report) {
         return ReportResponse.builder()
                 .id(report.getId())
@@ -54,10 +64,17 @@ public class SessionReportController {
                 .reason(report.getReason())
                 .description(report.getDescription())
                 .evidenceUrl(report.getEvidenceUrl())
+                .counterDescription(report.getCounterDescription())
+                .counterEvidenceUrl(report.getCounterEvidenceUrl())
+                .counterSubmittedAt(report.getCounterSubmittedAt())
                 .status(report.getStatus())
                 .adminNotes(report.getAdminNotes())
                 .resolvedAt(report.getResolvedAt())
                 .createdAt(report.getCreatedAt())
+                .sessionStartedAt(report.getSession().getStartedAt())
+                .sessionEndedAt(report.getSession().getEndedAt())
+                .teacherLeftAt(report.getSession().getTeacherLeftAt())
+                .learnerLeftAt(report.getSession().getLearnerLeftAt())
                 .build();
     }
 }

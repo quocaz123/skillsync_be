@@ -6,7 +6,6 @@ import com.skillsync.skillsync.dto.request.upload.UpdateAvatarRequest;
 import com.skillsync.skillsync.dto.request.user.UpdateBioRequest;
 import com.skillsync.skillsync.dto.response.user.UserResponse;
 import com.skillsync.skillsync.entity.User;
-import com.skillsync.skillsync.entity.UserLearningInterest;
 import com.skillsync.skillsync.repository.*;
 import com.skillsync.skillsync.dto.response.user.CreditTransactionResponse;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +23,6 @@ public class UserService {
     private final FileUploadService fileUploadService;
     private final SessionRepository sessionRepository;
     private final ReviewRepository reviewRepository;
-    private final UserLearningInterestRepository learningInterestRepository;
     private final UserTeachingSkillRepository userTeachingSkillRepository;
     private final CreditTransactionRepository creditTransactionRepository;
     private final PasswordEncoder passwordEncoder;
@@ -34,7 +32,7 @@ public class UserService {
     public User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new com.skillsync.skillsync.exception.AppException(com.skillsync.skillsync.exception.ErrorCode.UNAUTHORIZED));
     }
 
     private UserResponse buildFullResponse(User user) {
@@ -44,17 +42,7 @@ public class UserService {
         long learningSessions  = sessionRepository.countByLearnerId(id);
         Double avgRating       = reviewRepository.findAverageRatingByRevieweeId(id);
         long totalReviews      = reviewRepository.countByRevieweeId(id);
-        long teachingSkillsCount = userTeachingSkillRepository.findByUserIdOrderByCreatedAtDesc(id).size();
-
-        List<UserLearningInterest> interests = learningInterestRepository.findByUserId(id);
-        List<UserResponse.LearningInterestSummary> interestSummaries = interests.stream()
-                .map(i -> UserResponse.LearningInterestSummary.builder()
-                        .skillName(i.getSkill() != null ? i.getSkill().getName() : null)
-                        .skillIcon(i.getSkill() != null ? i.getSkill().getIcon() : null)
-                        .desiredLevel(i.getDesiredLevel() != null ? i.getDesiredLevel().name() : null)
-                        .learningGoal(i.getLearningGoal())
-                        .build())
-                .collect(Collectors.toList());
+        Long totalTeachingSkills = (long) userTeachingSkillRepository.findByUserIdOrderByCreatedAtDesc(id).size();
 
         Integer pendingLearner = sessionRepository.getLearnerPendingCredits(id);
         Integer pendingTeacher = sessionRepository.getTeacherPendingCredits(id);
@@ -75,15 +63,12 @@ public class UserService {
                 .creditsBalance(user.getCreditsBalance())
                 .pendingLearnerCredits(pendingLearner)
                 .pendingTeacherCredits(pendingTeacher)
-                .trustScore(user.getTrustScore())
                 // stats
                 .totalTeachingSessions(teachingSessions)
                 .totalLearningSessions(learningSessions)
                 .averageRating(avgRating != null ? Math.round(avgRating * 10.0) / 10.0 : null)
                 .totalReviews(totalReviews)
-                .totalTeachingSkills(teachingSkillsCount)
-                // interests
-                .learningInterests(interestSummaries)
+                .totalTeachingSkills(totalTeachingSkills)
                 .build();
     }
 
@@ -113,7 +98,7 @@ public class UserService {
 
         User user = getCurrentUser();
 
-        // Xóa avatar cũ trên S3 nếu có
+        // Xóa avatar cũ trên R2 nếu có
         if (user.getAvatarKey() != null && !user.getAvatarKey().isBlank()) {
             fileUploadService.deleteFileByKey(user.getAvatarKey());
         }
@@ -152,7 +137,6 @@ public class UserService {
                         .status(u.getStatus())
                         .role(u.getRole())
                         .creditsBalance(u.getCreditsBalance())
-                        .trustScore(u.getTrustScore())
                         .createdAt(u.getCreatedAt())
                         .build()
                 ).sorted((u1, u2) -> u2.getCreatedAt().compareTo(u1.getCreatedAt()))
@@ -183,7 +167,6 @@ public class UserService {
                 .status(user.getStatus())
                 .role(user.getRole())
                 .creditsBalance(user.getCreditsBalance())
-                .trustScore(user.getTrustScore())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

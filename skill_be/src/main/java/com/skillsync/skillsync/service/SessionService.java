@@ -1,11 +1,13 @@
 package com.skillsync.skillsync.service;
 
 import com.skillsync.skillsync.dto.request.session.BookSessionRequest;
+import com.skillsync.skillsync.dto.request.session.ProposeSessionRequest;
 import com.skillsync.skillsync.dto.response.session.SessionResponse;
 import com.skillsync.skillsync.dto.response.session.ZegoTokenResponse;
 import com.skillsync.skillsync.entity.Session;
 import com.skillsync.skillsync.entity.TeachingSlot;
 import com.skillsync.skillsync.entity.User;
+import com.skillsync.skillsync.entity.UserTeachingSkill;
 import com.skillsync.skillsync.enums.SessionStatus;
 import com.skillsync.skillsync.enums.SlotStatus;
 import com.skillsync.skillsync.exception.AppException;
@@ -16,6 +18,7 @@ import com.skillsync.skillsync.repository.CreditTransactionRepository;
 import com.skillsync.skillsync.repository.SessionRepository;
 import com.skillsync.skillsync.repository.TeachingSlotRepository;
 import com.skillsync.skillsync.repository.UserRepository;
+import com.skillsync.skillsync.repository.UserTeachingSkillRepository;
 import com.skillsync.skillsync.dto.request.notification.NotificationCreateRequest;
 import com.skillsync.skillsync.enums.NotificationType;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +45,8 @@ public class SessionService {
     private final CreditTransactionRepository transactionRepository;
     private final NotificationService notificationService;
     private final SystemLogService systemLogService;
+    private final UserTeachingSkillRepository userTeachingSkillRepository;
+    private final NotificationEventPublisher notificationEventPublisher;
 
     // ── Book (Request) ──────────────────────────────────────
     @Transactional
@@ -56,6 +61,10 @@ public class SessionService {
         }
         if (slot.getTeacher().getId().equals(learner.getId())) {
             throw new AppException(ErrorCode.FORBIDDEN); // teacher không tự book slot mình
+        }
+
+        if (slot.getTeachingSkill() != null && slot.getTeachingSkill().isHidden()) {
+            throw new AppException(ErrorCode.TEACHING_SKILL_NOT_ACCEPTING);
         }
 
         // Không cho học viên đặt slot bị trùng/overlap với lịch học hiện có của chính họ
@@ -112,6 +121,124 @@ public class SessionService {
                 .entityId(session.getId())
                 .redirectUrl("/app/teaching")
                 .build());
+
+        // Publish qua Kafka để gửi Email
+        notificationEventPublisher.publishSessionEvent(
+                "SESSION_BOOKED",
+                slot.getTeacher().getEmail(),
+                slot.getTeacher().getFullName(),
+                learner.getFullName(),
+                slot.getTeachingSkill().getSkill().getName(),
+                slot.getSlotDate() != null ? slot.getSlotDate().toString() : "",
+                slot.getSlotTime() != null ? slot.getSlotTime().toString() : "",
+                cost,
+                session.getId().toString()
+        );
+
+        return toResponse(session);
+    }
+
+    @Transactional
+    public SessionResponse proposeSession(ProposeSessionRequest request) {
+        User learner = userService.getCurrentUser();
+
+        UserTeachingSkill teachingSkill = userTeachingSkillRepository.findById(request.getTeachingSkillId())
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND));
+
+        if (teachingSkill.getVerificationStatus() != com.skillsync.skillsync.enums.VerificationStatus.APPROVED) {
+            throw new AppException(ErrorCode.FORBIDDEN); // Chỉ skill APPROVED mới được propose
+        }
+
+        if (teachingSkill.isHidden()) {
+            throw new AppException(ErrorCode.TEACHING_SKILL_NOT_ACCEPTING);
+        }
+
+        if (teachingSkill.getUser().getId().equals(learner.getId())) {
+            throw new AppException(ErrorCode.FORBIDDEN); // Teacher không được tự book chính mình
+        }
+
+        // Validate time
+        if (request.getSlotEndTime() != null && !request.getSlotEndTime().isAfter(request.getSlotTime())) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+        
+        java.time.LocalTime slotStart = request.getSlotTime();
+        java.time.LocalTime slotEnd = normalizeEndTime(slotStart, request.getSlotEndTime());
+
+        // Validate conflicts with learner's own schedule
+        List<Session> learnerSessions = sessionRepository.findByLearnerIdAndStatusNotOrderByCreatedAtDesc(
+                learner.getId(), SessionStatus.CANCELLED);
+        for (Session s : learnerSessions) {
+            if (s.getSlot() == null) continue;
+            if (s.getSlot().getSlotDate() == null || s.getSlot().getSlotTime() == null) continue;
+            if (!s.getSlot().getSlotDate().equals(request.getSlotDate())) continue;
+
+            java.time.LocalTime otherStart = s.getSlot().getSlotTime();
+            java.time.LocalTime otherEnd = normalizeEndTime(otherStart, s.getSlot().getSlotEndTime());
+            if (isOverlap(otherStart, otherEnd, slotStart, slotEnd)) {
+                throw new AppException(ErrorCode.SESSION_TIME_CONFLICT);
+            }
+        }
+
+        // Calculate cost based on duration
+        long durationHours = java.time.Duration.between(slotStart, slotEnd).toHours();
+        if (durationHours == 0) durationHours = 1; // Default minimum 1 hour
+        int cost = (int) durationHours * teachingSkill.getCreditsPerHour();
+
+        if (learner.getCreditsBalance() == null || learner.getCreditsBalance() < cost) {
+            throw new AppException(ErrorCode.INSUFFICIENT_CREDITS);
+        }
+
+        // Create a dedicated BOOKED slot for this proposal
+        TeachingSlot generatedSlot = TeachingSlot.builder()
+                .teacher(teachingSkill.getUser())
+                .teachingSkill(teachingSkill)
+                .slotDate(request.getSlotDate())
+                .slotTime(slotStart)
+                .slotEndTime(slotEnd)
+                .creditCost(cost)
+                .status(SlotStatus.BOOKED) // Tự sinh nên ẩn khỏi danh sách OPEN
+                .build();
+        generatedSlot = slotRepository.save(generatedSlot);
+
+        // Create Session
+        String videoRoomId = "skillsync_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+        Session session = Session.builder()
+                .learner(learner)
+                .teacher(teachingSkill.getUser())
+                .slot(generatedSlot)
+                .teachingSkill(teachingSkill)
+                .status(SessionStatus.PENDING_APPROVAL)
+                .creditCost(cost)
+                .videoRoomId(videoRoomId)
+                .videoProvider("ZEGO")
+                .learnerNotes(request.getLearnerNotes())
+                .build();
+
+        session = sessionRepository.save(session);
+
+        // Notify Mentor
+        notificationService.createAndSend(NotificationCreateRequest.builder()
+                .userId(teachingSkill.getUser().getId())
+                .type(NotificationType.SESSION_BOOKED)
+                .title("Có đề xuất mở lớp ngoài giờ")
+                .content(learner.getFullName() + " muốn học kỹ năng " + teachingSkill.getSkill().getName() + " vào một khung giờ tự đề xuất.")
+                .entityId(session.getId())
+                .redirectUrl("/app/teaching")
+                .build());
+
+        // Publish qua Kafka để gửi Email
+        notificationEventPublisher.publishSessionEvent(
+                "SESSION_BOOKED",
+                teachingSkill.getUser().getEmail(),
+                teachingSkill.getUser().getFullName(),
+                learner.getFullName(),
+                teachingSkill.getSkill().getName(),
+                request.getSlotDate() != null ? request.getSlotDate().toString() : "",
+                slotStart != null ? slotStart.toString() : "",
+                cost,
+                session.getId().toString()
+        );
 
         return toResponse(session);
     }
@@ -187,6 +314,19 @@ public class SessionService {
                         .entityId(pendingSession.getId())
                         .redirectUrl("/app/sessions")
                         .build());
+
+                // Publish qua Kafka để gửi Email báo bị nhường slot
+                notificationEventPublisher.publishSessionEvent(
+                        "SESSION_CANCELLED",
+                        pendingSession.getLearner().getEmail(),
+                        pendingSession.getLearner().getFullName(),
+                        teacher.getFullName(),
+                        pendingSession.getTeachingSkill().getSkill().getName(),
+                        pendingSession.getSlot() != null && pendingSession.getSlot().getSlotDate() != null ? pendingSession.getSlot().getSlotDate().toString() : "",
+                        pendingSession.getSlot() != null && pendingSession.getSlot().getSlotTime() != null ? pendingSession.getSlot().getSlotTime().toString() : "",
+                        pendingSession.getCreditCost(),
+                        pendingSession.getId().toString()
+                );
             }
         }
 
@@ -199,6 +339,19 @@ public class SessionService {
                 .entityId(session.getId())
                 .redirectUrl("/app/sessions")
                 .build());
+
+        // Publish Kafka để gửi Email báo đã nhận lịch
+        notificationEventPublisher.publishSessionEvent(
+                "SESSION_APPROVED",
+                learner.getEmail(),
+                learner.getFullName(),
+                teacher.getFullName(),
+                session.getTeachingSkill().getSkill().getName(),
+                session.getSlot() != null && session.getSlot().getSlotDate() != null ? session.getSlot().getSlotDate().toString() : "",
+                session.getSlot() != null && session.getSlot().getSlotTime() != null ? session.getSlot().getSlotTime().toString() : "",
+                cost,
+                session.getId().toString()
+        );
 
         return toResponse(session);
     }
@@ -228,6 +381,19 @@ public class SessionService {
                 .entityId(session.getId())
                 .redirectUrl("/app/sessions")
                 .build());
+
+        // Publish Kafka để gửi Email báo bị huỷ
+        notificationEventPublisher.publishSessionEvent(
+                "SESSION_REJECTED",
+                session.getLearner().getEmail(),
+                session.getLearner().getFullName(),
+                teacher.getFullName(),
+                session.getTeachingSkill().getSkill().getName(),
+                session.getSlot() != null && session.getSlot().getSlotDate() != null ? session.getSlot().getSlotDate().toString() : "",
+                session.getSlot() != null && session.getSlot().getSlotTime() != null ? session.getSlot().getSlotTime().toString() : "",
+                session.getCreditCost(),
+                session.getId().toString()
+        );
     }
 
 
@@ -525,6 +691,7 @@ public class SessionService {
                 .creditCost(s.getCreditCost())
                 .slotDate(s.getSlot() != null ? s.getSlot().getSlotDate() : null)
                 .slotTime(s.getSlot() != null ? s.getSlot().getSlotTime() : null)
+                .slotEndTime(s.getSlot() != null ? s.getSlot().getSlotEndTime() : null)
                 .teacherId(s.getTeacher() != null ? s.getTeacher().getId() : null)
                 .teacherName(s.getTeacher() != null ? s.getTeacher().getFullName() : null)
                 .teacherAvatar(s.getTeacher() != null ? s.getTeacher().getAvatarUrl() : null)

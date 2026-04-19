@@ -6,6 +6,7 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
+import com.skillsync.skillsync.constant.AuthConstants;
 import com.skillsync.skillsync.dto.request.auth.AuthenticationRequest;
 import com.skillsync.skillsync.dto.request.auth.LoginRequest;
 import com.skillsync.skillsync.dto.response.auth.AuthenticationResponse;
@@ -65,13 +66,25 @@ public class AuthService {
                 : request.getEmail().split("@")[0];
         user.setFullName(fullName);
 
+        // Sinh mã OTP 6 số ngẫu nhiên
+        String otpCode = String.format("%06d", new java.util.Random().nextInt(999999));
+        user.setOtpCode(otpCode);
+        user.setOtpExpiryTime(java.time.LocalDateTime.now().plusMinutes(AuthConstants.OTP_VALID_MINUTES));
+        user.setIsEmailVerified(false);
+
         userRepository.save(user);
 
-        // Publish WELCOME email event lên Kafka → skillsync-notification sẽ gửi email
-        notificationEventPublisher.publishWelcome(user.getEmail(), user.getFullName());
-        log.info("[AuthService] Published WELCOME event for new user: {}", user.getEmail());
+        // Publish VERIFY_ACCOUNT email event 
+        notificationEventPublisher.publishVerifyAccount(user.getEmail(), user.getFullName(), otpCode);
+        log.info("[AuthService] Published VERIFY_ACCOUNT event for new user: {}", user.getEmail());
 
-        return buildAuth(user);
+        // Do not return tokens yet
+        return AuthenticationResponse.builder()
+                .userId(user.getId() != null ? user.getId().toString() : null)
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .role(user.getRole().name())
+                .build();
     }
 
     public AuthenticationResponse login(LoginRequest request) {
@@ -80,6 +93,10 @@ public class AuthService {
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new AppException(ErrorCode.INVALID_CREDENTIALS);
+        }
+
+        if (Boolean.FALSE.equals(user.getIsEmailVerified())) {
+            throw new AppException(ErrorCode.UNVERIFIED_ACCOUNT);
         }
 
         return buildAuth(user);
@@ -142,6 +159,7 @@ public class AuthService {
                         newUser.setPassword(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
                         newUser.setHasPassword(false);
                         newUser.setRole(Role.USER);
+                        newUser.setIsEmailVerified(true);
                         log.info("New user created from Google login: {}", email);
                         User saved = userRepository.save(newUser);
 
@@ -222,6 +240,78 @@ public class AuthService {
 
     private static String enc(String value) {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
+    }
+
+    /** Xác minh email — không phát hành phiên đăng nhập; người dùng đăng nhập thủ công sau đó. */
+    public void verifyEmail(String email, String otpCode) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        if (Boolean.TRUE.equals(user.getIsEmailVerified())) {
+            return;
+        }
+
+        if (user.getOtpCode() == null || !user.getOtpCode().equals(otpCode)) {
+            throw new AppException(ErrorCode.INVALID_OTP);
+        }
+
+        if (user.getOtpExpiryTime() != null && user.getOtpExpiryTime().isBefore(java.time.LocalDateTime.now())) {
+            throw new AppException(ErrorCode.OTP_EXPIRED);
+        }
+
+        user.setIsEmailVerified(true);
+        user.setOtpCode(null);
+        user.setOtpExpiryTime(null);
+        userRepository.save(user);
+
+        notificationEventPublisher.publishWelcome(user.getEmail(), user.getFullName());
+    }
+
+    public void resendOTP(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        if (Boolean.TRUE.equals(user.getIsEmailVerified())) {
+            return; // Already verified
+        }
+
+        String otpCode = String.format("%06d", new java.util.Random().nextInt(999999));
+        user.setOtpCode(otpCode);
+        user.setOtpExpiryTime(java.time.LocalDateTime.now().plusMinutes(AuthConstants.OTP_VALID_MINUTES));
+        userRepository.save(user);
+
+        notificationEventPublisher.publishVerifyAccount(user.getEmail(), user.getFullName(), otpCode);
+    }
+
+    public void forgotPassword(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        String otpCode = String.format("%06d", new java.util.Random().nextInt(999999));
+        user.setOtpCode(otpCode);
+        user.setOtpExpiryTime(java.time.LocalDateTime.now().plusMinutes(AuthConstants.OTP_VALID_MINUTES));
+        userRepository.save(user);
+
+        notificationEventPublisher.publishForgotPassword(user.getEmail(), user.getFullName(), otpCode);
+    }
+
+    public void resetPassword(String email, String otpCode, String newPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.getOtpCode() == null || !user.getOtpCode().equals(otpCode)) {
+            throw new AppException(ErrorCode.INVALID_OTP);
+        }
+
+        if (user.getOtpExpiryTime() != null && user.getOtpExpiryTime().isBefore(java.time.LocalDateTime.now())) {
+            throw new AppException(ErrorCode.OTP_EXPIRED);
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setHasPassword(true);
+        user.setOtpCode(null);
+        user.setOtpExpiryTime(null);
+        userRepository.save(user);
     }
 
     AuthenticationResponse buildAuth(User user) {

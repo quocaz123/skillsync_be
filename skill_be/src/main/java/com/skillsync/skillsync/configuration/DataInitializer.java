@@ -9,9 +9,11 @@ import com.skillsync.skillsync.entity.ForumPost;
 import com.skillsync.skillsync.enums.Role;
 import com.skillsync.skillsync.enums.ForumPostStatus;
 import com.skillsync.skillsync.enums.SkillCategory;
+
 import com.skillsync.skillsync.entity.CreditMission;
 import com.skillsync.skillsync.enums.MissionType;
 import com.skillsync.skillsync.repository.CreditMissionRepository;
+
 import com.skillsync.skillsync.repository.ForumCategoryRepository;
 import com.skillsync.skillsync.repository.ForumPostRepository;
 import com.skillsync.skillsync.repository.SkillRepository;
@@ -24,6 +26,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.io.InputStream;
+
 import java.util.List;
 import java.util.Map;
 
@@ -38,6 +41,7 @@ public class DataInitializer implements CommandLineRunner {
     private final CreditMissionRepository creditMissionRepository;
     private final ForumCategoryRepository forumCategoryRepository;
     private final ForumPostRepository forumPostRepository;
+
     private final ObjectMapper objectMapper;
 
     @Override
@@ -48,6 +52,7 @@ public class DataInitializer implements CommandLineRunner {
         seedForumCategories();
         backfillForumPostStatuses();
         seedMissions();
+
     }
 
 
@@ -58,6 +63,7 @@ public class DataInitializer implements CommandLineRunner {
                     .password(passwordEncoder.encode(rawPassword))
                     .role(role)
                     .fullName(deriveFullNameFromEmail(email))
+                    .isEmailVerified(true)
                     .build();
             userRepository.save(user);
             log.info("✅ Seeded {} user: {}", role.name(), email);
@@ -205,4 +211,6 @@ public class DataInitializer implements CommandLineRunner {
         creditMissionRepository.saveAll(defaultMissions);
         log.info("✅ Seeded {} default missions", defaultMissions.size());
     }
+
+
 }

@@ -32,6 +32,11 @@ spring:
       properties:
         spring.json.trusted.packages: "com.skillsync.notification.dto.event"
         spring.json.use.type.headers: false
+        # Increase max.poll.interval.ms to 15 minutes to allow Blocking Retries
+        max.poll.interval.ms: 900000
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
   # ── Thymeleaf ───────────────────────────────────────────────────────────────
   thymeleaf:
@@ -55,3 +60,4 @@ kafka:
     session: skillsync.notification.session
     credit: skillsync.notification.credit
     skill: skillsync.notification.skill
+    dlq: DLQ_EMAIL_TOPIC

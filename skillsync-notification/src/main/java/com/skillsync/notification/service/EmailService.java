@@ -70,6 +70,7 @@ public class EmailService {
         } catch (Exception e) {
             log.error("[EmailService] Failed to send '{}' email to {}: {}", request != null ? request.templateName() : "?",
                     request != null ? request.to() : "?", e.getMessage(), e);
+            throw new RuntimeException("Failed to send email to " + (request != null ? request.to() : "unknown"), e);
         }
     }
 }
