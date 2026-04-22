@@ -72,7 +72,15 @@ public class LearningPathController {
 
     /** User đăng ký học lộ trình */
     @PostMapping("/{id}/enroll")
-    public ApiResponse<LearningPathEnrollResponse> enroll(@PathVariable UUID id) {
+    public ApiResponse<com.skillsync.skillsync.dto.response.learningpath.LearningPathEnrollResponse> enroll(@PathVariable UUID id) {
         return ApiResponse.success(learningPathService.enroll(id));
+    }
+
+    /** User đánh giá lộ trình */
+    @PostMapping("/{id}/reviews")
+    public ApiResponse<com.skillsync.skillsync.dto.response.learningpath.LearningPathReviewResponse> addReview(
+            @PathVariable UUID id,
+            @RequestBody @jakarta.validation.Valid com.skillsync.skillsync.dto.request.learningpath.LearningPathReviewRequest request) {
+        return ApiResponse.success(learningPathService.addReview(id, request));
     }
 }

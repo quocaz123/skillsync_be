@@ -23,6 +23,10 @@ import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.skillsync.skillsync.dto.request.learningpath.LearningPathReviewRequest;
+import com.skillsync.skillsync.dto.response.learningpath.LearningPathReviewResponse;
+import com.skillsync.skillsync.entity.LearningPathReview;
+import com.skillsync.skillsync.repository.LearningPathReviewRepository;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +40,7 @@ public class LearningPathService {
 
     private final LearningPathRepository learningPathRepository;
     private final LearningPathEnrollmentRepository learningPathEnrollmentRepository;
+    private final LearningPathReviewRepository learningPathReviewRepository;
     private final UserRepository userRepository;
     private final UserService userService;
     @PersistenceContext
@@ -257,6 +262,47 @@ public class LearningPathService {
         }
     }
 
+    /** POST review */
+    @Transactional
+    public LearningPathReviewResponse addReview(UUID learningPathId, LearningPathReviewRequest req) {
+        User reviewer = userService.getCurrentUser();
+        LearningPath lp = learningPathRepository.findById(learningPathId)
+                .orElseThrow(() -> new RuntimeException("Lộ trình không tồn tại"));
+
+        if (learningPathReviewRepository.existsByLearningPathIdAndReviewerId(lp.getId(), reviewer.getId())) {
+            throw new RuntimeException("Bạn đã đánh giá lộ trình này rồi");
+        }
+
+        LearningPathReview review = LearningPathReview.builder()
+                .learningPath(lp)
+                .reviewer(reviewer)
+                .rating(req.getRating())
+                .comment(req.getComment())
+                .tags(req.getTags() != null ? String.join(",", req.getTags()) : null)
+                .build();
+
+        learningPathReviewRepository.save(review);
+
+        // Update aggregate rating
+        int newTotalReviews = lp.getTotalReviews() + 1;
+        double newRating = ((lp.getRating() * lp.getTotalReviews()) + req.getRating()) / newTotalReviews;
+        lp.setTotalReviews(newTotalReviews);
+        lp.setRating(newRating);
+        learningPathRepository.save(lp);
+
+        return LearningPathReviewResponse.builder()
+                .id(review.getId())
+                .learningPathId(lp.getId())
+                .reviewerId(reviewer.getId())
+                .reviewerName(reviewer.getFullName())
+                .reviewerAvatarUrl(reviewer.getAvatarUrl())
+                .rating(review.getRating())
+                .comment(review.getComment())
+                .tags(req.getTags())
+                .createdAt(review.getCreatedAt())
+                .build();
+    }
+
     // ─── Mappers ────────────────────────────────────────────
 
     private LearningPathResponse toResponse(LearningPath lp) {
@@ -280,6 +326,8 @@ public class LearningPathService {
                 .registrationType(lp.getRegistrationType() != null ? lp.getRegistrationType().name() : null)
                 .status(lp.getStatus() != null ? lp.getStatus().name() : null)
                 .rejectionReason(lp.getRejectionReason())
+                .rating(lp.getRating())
+                .totalReviews(lp.getTotalReviews())
                 .teacherId(lp.getTeacher().getId().toString())
                 .teacherName(lp.getTeacher().getFullName())
                 .teacherAvatarUrl(lp.getTeacher().getAvatarUrl())
@@ -312,6 +360,8 @@ public class LearningPathService {
                 .thumbnailUrl(lp.getThumbnailUrl())
                 .totalCredits(lp.getTotalCredits())
                 .status(lp.getStatus() != null ? lp.getStatus().name() : null)
+                .rating(lp.getRating())
+                .totalReviews(lp.getTotalReviews())
                 .teacherId(lp.getTeacher().getId().toString())
                 .teacherName(lp.getTeacher().getFullName())
                 .teacherAvatarUrl(lp.getTeacher().getAvatarUrl())

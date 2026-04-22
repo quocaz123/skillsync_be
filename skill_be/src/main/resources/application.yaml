@@ -66,12 +66,12 @@ google:
 # (hoặc custom domain đã gắn bucket). Không dùng https://<account>.r2.cloudflarestorage.com làm public URL.
 cloudflare:
   r2:
-    access-key: ${CLOUDFLARE_R2_ACCESS_KEY}
-    secret-key: ${CLOUDFLARE_R2_SECRET_KEY}
+    access-key: ${CLOUDFLARE_R2_ACCESS_KEY:dummy}
+    secret-key: ${CLOUDFLARE_R2_SECRET_KEY:dummy}
     region: ${CLOUDFLARE_R2_REGION:auto}
-    endpoint: ${CLOUDFLARE_R2_ENDPOINT_URL}
-    bucket-name: ${CLOUDFLARE_R2_BUCKET}
-    public-base-url: ${CLOUDFLARE_R2_PUBLIC_URL}
+    endpoint: ${CLOUDFLARE_R2_ENDPOINT_URL:https://dummy.r2.cloudflarestorage.com}
+    bucket-name: ${CLOUDFLARE_R2_BUCKET:dummy}
+    public-base-url: ${CLOUDFLARE_R2_PUBLIC_URL:https://dummy.r2.dev}
 
 # ── Gemini (Google AI Studio — REST, không cần Spring AI) ──
 # gemini-2.0-flash-lite: 30 RPM, 1500 RPD (free tier)

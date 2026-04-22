@@ -57,6 +57,14 @@ public class LearningPath {
     @Column(name = "thumbnail_url", length = 500)
     String thumbnailUrl;
 
+    @Column(name = "rating", columnDefinition = "float DEFAULT 0.0")
+    @Builder.Default
+    Double rating = 0.0;
+
+    @Column(name = "total_reviews", columnDefinition = "integer DEFAULT 0")
+    @Builder.Default
+    Integer totalReviews = 0;
+
     @Column(name = "total_credits", nullable = false)
     @Builder.Default
     Integer totalCredits = 0;

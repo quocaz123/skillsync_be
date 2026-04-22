@@ -40,6 +40,8 @@ public class LearningPathResponse {
     Integer enrollmentCount;
     Integer progressPercent;
     String enrollmentStatus;
+    Double rating;
+    Integer totalReviews;
 
     List<LearningPathModuleResponse> modules;
 
