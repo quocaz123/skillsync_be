@@ -7,16 +7,19 @@ import com.skillsync.skillsync.dto.response.learningpath.LearningPathEnrollRespo
 import com.skillsync.skillsync.dto.response.learningpath.LearningPathLessonResponse;
 import com.skillsync.skillsync.dto.response.learningpath.LearningPathModuleResponse;
 import com.skillsync.skillsync.dto.response.learningpath.LearningPathResponse;
+import com.skillsync.skillsync.entity.CreditTransaction;
 import com.skillsync.skillsync.entity.LearningPath;
 import com.skillsync.skillsync.entity.LearningPathEnrollment;
 import com.skillsync.skillsync.entity.LearningPathLesson;
 import com.skillsync.skillsync.entity.LearningPathModule;
 import com.skillsync.skillsync.entity.User;
+import com.skillsync.skillsync.enums.TransactionType;
 import com.skillsync.skillsync.exception.AppException;
 import com.skillsync.skillsync.exception.ErrorCode;
 import com.skillsync.skillsync.enums.LearningPathStatus;
 import com.skillsync.skillsync.enums.RegistrationType;
 import com.skillsync.skillsync.enums.Role;
+import com.skillsync.skillsync.repository.CreditTransactionRepository;
 import com.skillsync.skillsync.repository.LearningPathEnrollmentRepository;
 import com.skillsync.skillsync.repository.LearningPathRepository;
 import com.skillsync.skillsync.repository.UserRepository;
@@ -43,6 +46,7 @@ public class LearningPathService {
     private final LearningPathRepository learningPathRepository;
     private final LearningPathEnrollmentRepository learningPathEnrollmentRepository;
     private final LearningPathReviewRepository learningPathReviewRepository;
+    private final CreditTransactionRepository creditTransactionRepository;
     private final UserRepository userRepository;
     private final UserService userService;
     @PersistenceContext
@@ -211,6 +215,15 @@ public class LearningPathService {
         if (cost > 0) {
             student.setCreditsBalance(balance - cost);
             userRepository.save(student);
+
+            CreditTransaction transaction = CreditTransaction.builder()
+                    .user(student)
+                    .amount(-cost)
+                    .transactionType(TransactionType.SPEND_SESSION)
+                    .referenceId(lp.getId())
+                    .description("Lộ trình học trả phí : " + lp.getTitle())
+                    .build();
+            creditTransactionRepository.save(transaction);
         }
 
         LearningPathEnrollment enrollment = LearningPathEnrollment.builder()
