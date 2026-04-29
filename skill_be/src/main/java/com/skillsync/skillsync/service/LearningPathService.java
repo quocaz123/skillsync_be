@@ -12,6 +12,8 @@ import com.skillsync.skillsync.entity.LearningPathEnrollment;
 import com.skillsync.skillsync.entity.LearningPathLesson;
 import com.skillsync.skillsync.entity.LearningPathModule;
 import com.skillsync.skillsync.entity.User;
+import com.skillsync.skillsync.exception.AppException;
+import com.skillsync.skillsync.exception.ErrorCode;
 import com.skillsync.skillsync.enums.LearningPathStatus;
 import com.skillsync.skillsync.enums.RegistrationType;
 import com.skillsync.skillsync.enums.Role;
@@ -87,7 +89,7 @@ public class LearningPathService {
     @Transactional(readOnly = true)
     public LearningPathResponse getById(UUID id) {
         LearningPath lp = learningPathRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Lộ trình không tồn tại"));
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Lộ trình không tồn tại"));
         return toResponse(lp);
     }
 
@@ -95,7 +97,7 @@ public class LearningPathService {
     @Transactional
     public LearningPathResponse create(UUID mentorId, LearningPathCreateRequest req) {
         User teacher = userRepository.findById(mentorId)
-                .orElseThrow(() -> new RuntimeException("Mentor không tồn tại: " + mentorId));
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "Mentor không tồn tại: " + mentorId));
 
         LearningPath lp = LearningPath.builder()
                 .teacher(teacher)
@@ -163,7 +165,7 @@ public class LearningPathService {
     @Transactional
     public LearningPathResponse approve(UUID id) {
         LearningPath lp = learningPathRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Lộ trình không tồn tại"));
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Lộ trình không tồn tại"));
         lp.setStatus(LearningPathStatus.APPROVED);
         lp.setRejectionReason(null);
         return toResponse(learningPathRepository.save(lp));
@@ -173,7 +175,7 @@ public class LearningPathService {
     @Transactional
     public LearningPathResponse reject(UUID id, String reason) {
         LearningPath lp = learningPathRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Lộ trình không tồn tại"));
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Lộ trình không tồn tại"));
         lp.setStatus(LearningPathStatus.REJECTED);
         lp.setRejectionReason(reason);
         return toResponse(learningPathRepository.save(lp));
@@ -184,10 +186,10 @@ public class LearningPathService {
     public LearningPathEnrollResponse enroll(UUID learningPathId) {
         User student = userService.getCurrentUser();
         LearningPath lp = learningPathRepository.findById(learningPathId)
-                .orElseThrow(() -> new RuntimeException("Lộ trình không tồn tại"));
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Lộ trình không tồn tại"));
 
         if (lp.getStatus() != LearningPathStatus.APPROVED) {
-            throw new RuntimeException("Lộ trình chưa sẵn sàng để đăng ký");
+            throw new AppException(ErrorCode.LEARNING_PATH_NOT_READY, "Lộ trình chưa sẵn sàng để đăng ký");
         }
 
         var existing = learningPathEnrollmentRepository.findByLearningPathIdAndStudentId(lp.getId(), student.getId());
@@ -203,7 +205,7 @@ public class LearningPathService {
         int cost = lp.getTotalCredits() != null ? lp.getTotalCredits() : 0;
         int balance = student.getCreditsBalance() != null ? student.getCreditsBalance() : 0;
         if (cost > balance) {
-            throw new RuntimeException("Không đủ credits để đăng ký lộ trình này");
+            throw new AppException(ErrorCode.INSUFFICIENT_CREDITS, "Không đủ credits để đăng ký lộ trình này");
         }
 
         if (cost > 0) {
@@ -267,10 +269,10 @@ public class LearningPathService {
     public LearningPathReviewResponse addReview(UUID learningPathId, LearningPathReviewRequest req) {
         User reviewer = userService.getCurrentUser();
         LearningPath lp = learningPathRepository.findById(learningPathId)
-                .orElseThrow(() -> new RuntimeException("Lộ trình không tồn tại"));
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Lộ trình không tồn tại"));
 
         if (learningPathReviewRepository.existsByLearningPathIdAndReviewerId(lp.getId(), reviewer.getId())) {
-            throw new RuntimeException("Bạn đã đánh giá lộ trình này rồi");
+            throw new AppException(ErrorCode.LEARNING_PATH_ALREADY_RATED, "Bạn đã đánh giá lộ trình này rồi");
         }
 
         LearningPathReview review = LearningPathReview.builder()

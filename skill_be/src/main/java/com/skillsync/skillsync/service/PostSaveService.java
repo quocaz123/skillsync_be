@@ -6,6 +6,8 @@ import com.skillsync.skillsync.entity.ForumPost;
 import com.skillsync.skillsync.entity.PostSave;
 import com.skillsync.skillsync.entity.User;
 import com.skillsync.skillsync.enums.ForumPostStatus;
+import com.skillsync.skillsync.exception.AppException;
+import com.skillsync.skillsync.exception.ErrorCode;
 import com.skillsync.skillsync.repository.ForumPostRepository;
 import com.skillsync.skillsync.repository.PostSaveRepository;
 import com.skillsync.skillsync.repository.PostVoteRepository;
@@ -207,7 +209,7 @@ public class PostSaveService {
      */
     private void ensurePostAccessible(ForumPost post, User currentUser) {
         if (!canAccess(post, currentUser)) {
-            throw new RuntimeException("Post not found with id: " + post.getId());
+            throw new AppException(ErrorCode.NOT_FOUND, "Post not found with id: " + post.getId());
         }
     }
 

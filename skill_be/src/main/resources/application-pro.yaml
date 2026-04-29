@@ -1,17 +1,22 @@
+# Bật profile này bằng: -Dspring.profiles.active=pro hoặc SPRING_PROFILES_ACTIVE=pro
+# (Không khai báo spring.profiles.active trong file application-pro — Spring Boot báo lỗi.)
 server:
   port: 8080
   servlet:
     context-path: /skillsync
 
 spring:
-  profiles:
-    active: pro
-    
+  jackson:
+    time-zone: Asia/Ho_Chi_Minh
+
   datasource:
     url: ${DB_URL}
     username: ${DB_USER}
     password: ${DB_PASS}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      data-source-properties:
+        prepareThreshold: 0
 
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
@@ -23,12 +28,92 @@ spring:
         "[format_sql]": false
         "[jdbc.lob.non_contextual_creation]": true
 
+  # ── Upstash Redis (TLS) ──────────────────────────────────
+  # Upstash dùng port 6380 + TLS bắt buộc (khác local port 6379)
+  data:
+    redis:
+      url: ${REDIS_URL}          # rediss://:<password>@<host>.upstash.io:6380
+      ssl:
+        enabled: true
+      timeout: 3000ms
+
+  # ── Aiven Kafka (SASL_SSL + SCRAM-SHA-256) ─────────────
+  # Bootstrap: <service>.aivencloud.com:<port> (lấy từ Aiven Console)
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: false
+    properties:
+      # Truyền vào KafkaProducerConfig để build JAAS config
+      sasl-username: ${KAFKA_SASL_USERNAME}   # thường là "avnadmin"
+      sasl-password: ${KAFKA_SASL_PASSWORD}   # Service Password trong Aiven Console
+
 jwt:
-  # Nếu không set JWT_SECRET thì dùng chuỗi rỗng để server không crash khi dev.
-  # JwtService sẽ tự tạo secret tạm thời (không dùng cho production).
-  secret: ${JWT_SECRET:}
+  secret: ${JWT_SECRET}
 
 app:
+  timezone: ${APP_TIMEZONE:Asia/Ho_Chi_Minh}
   cookie:
     secure: true
     same-site: Strict
+
+google:
+  client-id: ${GOOGLE_CLIENT_ID}
+  client-secret: ${GOOGLE_CLIENT_SECRET}
+
+cloudflare:
+  r2:
+    access-key: ${CLOUDFLARE_R2_ACCESS_KEY}
+    secret-key: ${CLOUDFLARE_R2_SECRET_KEY}
+    region: ${CLOUDFLARE_R2_REGION:auto}
+    endpoint: ${CLOUDFLARE_R2_ENDPOINT_URL}
+    bucket-name: ${CLOUDFLARE_R2_BUCKET}
+    public-base-url: ${CLOUDFLARE_R2_PUBLIC_URL}
+
+# ── Gemini ──────────────────────────────────────────────
+gemini:
+  api-key: ${GEMINI_API_KEY}
+  model: gemini-3.1-flash-lite-preview
+  temperature: 0.2
+  max-output-tokens: 512
+  retry:
+    max-attempts: 0
+    initial-delay-ms: 1500
+  embedding-model: gemini-embedding-001
+  embedding-dim: 1536
+
+# ── Groq Cloud ───────────────────────────────────────────
+groq:
+  api-key: ${GROQ_API_KEY}
+  model: llama-3.3-70b-versatile
+  temperature: 0.2
+  max-output-tokens: 768
+
+# ── SkillSync AI tuning ──────────────────────────────────
+skillsync:
+  ai:
+    enrich-reasons-enabled: true
+    vector-search-enabled: true
+    vector-search-threshold: 0.80
+    vector-search-min-primary-results: 3
+    session:
+      ttl-minutes: 30
+      max-recent-turns: 10
+      summary-trigger-turns: 6
+
+# ── ZEGO Video Call ──────────────────────────────────────
+zego:
+  app-id: ${ZEGO_APP_ID}
+  server-secret: ${ZEGO_SERVER_SECRET}
+
+# ── Notification Kafka Topics ────────────────────────────
+kafka:
+  topics:
+    auth: skillsync.notification.auth
+    session: skillsync.notification.session
+    credit: skillsync.notification.credit
+    skill: skillsync.notification.skill
+

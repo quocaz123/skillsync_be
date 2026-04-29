@@ -8,6 +8,8 @@ import com.skillsync.skillsync.entity.ForumPost;
 import com.skillsync.skillsync.entity.CommentVote;
 import com.skillsync.skillsync.entity.User;
 import com.skillsync.skillsync.enums.ForumPostStatus;
+import com.skillsync.skillsync.exception.AppException;
+import com.skillsync.skillsync.exception.ErrorCode;
 import com.skillsync.skillsync.repository.ForumCommentRepository;
 import com.skillsync.skillsync.repository.ForumPostRepository;
 import com.skillsync.skillsync.repository.CommentVoteRepository;
@@ -144,7 +146,7 @@ public class ForumCommentService {
         User currentUser = userService.getCurrentUser();
 
         ForumComment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new RuntimeException("Comment not found with id: " + commentId));
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Comment not found with id: " + commentId));
 
         ensurePostAccessible(comment.getPost(), currentUser);
 
@@ -162,7 +164,7 @@ public class ForumCommentService {
         List<CommentResponse> tree = getPostComments(comment.getPost().getId());
         CommentResponse found = findInTree(tree, commentId);
         if (found == null) {
-            throw new RuntimeException("Comment not found with id: " + commentId);
+            throw new AppException(ErrorCode.NOT_FOUND, "Comment not found with id: " + commentId);
         }
         return found;
     }
@@ -190,14 +192,14 @@ public class ForumCommentService {
         User author = userService.getCurrentUser();
 
         ForumPost post = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("Post not found with id: " + postId));
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Post not found with id: " + postId));
 
         ensurePostAccessible(post, author);
 
         ForumComment parentComment = null;
         if (request.getParentCommentId() != null) {
             parentComment = commentRepository.findById(request.getParentCommentId())
-                    .orElseThrow(() -> new RuntimeException("Parent comment not found with id: " + request.getParentCommentId()));
+                    .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Parent comment not found with id: " + request.getParentCommentId()));
         }
 
         ForumComment comment = ForumComment.builder()
@@ -219,10 +221,10 @@ public class ForumCommentService {
         User currentUser = userService.getCurrentUser();
 
         ForumComment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new RuntimeException("Comment not found with id: " + commentId));
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Comment not found with id: " + commentId));
 
         if (!comment.getAuthor().getId().equals(currentUser.getId())) {
-            throw new RuntimeException("Unauthorized: only author can update this comment");
+            throw new AppException(ErrorCode.FORBIDDEN, "Unauthorized: only author can update this comment");
         }
 
         ensurePostAccessible(comment.getPost(), currentUser);
@@ -243,10 +245,10 @@ public class ForumCommentService {
         User currentUser = userService.getCurrentUser();
 
         ForumComment comment = commentRepository.findById(commentId)
-                .orElseThrow(() -> new RuntimeException("Comment not found with id: " + commentId));
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Comment not found with id: " + commentId));
 
         if (!comment.getAuthor().getId().equals(currentUser.getId())) {
-            throw new RuntimeException("Unauthorized: only author can delete this comment");
+            throw new AppException(ErrorCode.FORBIDDEN, "Unauthorized: only author can delete this comment");
         }
 
         ensurePostAccessible(comment.getPost(), currentUser);
@@ -308,7 +310,7 @@ public class ForumCommentService {
 
     private void ensurePostAccessible(ForumPost post, User currentUser) {
         if (post == null) {
-            throw new RuntimeException("Post not found");
+            throw new AppException(ErrorCode.NOT_FOUND, "Post not found");
         }
 
         boolean isAdmin = currentUser != null && currentUser.getRole() != null && "ADMIN".equalsIgnoreCase(currentUser.getRole().name());
@@ -316,7 +318,7 @@ public class ForumCommentService {
         boolean approved = post.getStatus() == ForumPostStatus.APPROVED;
 
         if (!approved && !isAdmin && !isAuthor) {
-            throw new RuntimeException("Post not found");
+            throw new AppException(ErrorCode.NOT_FOUND, "Post not found");
         }
     }
 }

@@ -30,7 +30,9 @@ public class SecurityConfiguration {
                                 "/auth/refresh",
                                 // Chưa có JWT sau đăng ký / quên mật khẩu — phải public
                                 "/auth/verify-email", "/auth/resend-verification",
-                                "/auth/forgot-password", "/auth/reset-password")
+                                "/auth/forgot-password", "/auth/reset-password",
+                                // Health check cho Koyeb / load balancer
+                                "/health")
                         .permitAll()
                         .requestMatchers("/auth/logout").permitAll()
                         .requestMatchers("/ws/**").permitAll()

@@ -1,6 +1,8 @@
 package com.skillsync.skillsync.service;
 
 import com.skillsync.skillsync.dto.request.user.UpdatePasswordRequest;
+import com.skillsync.skillsync.exception.AppException;
+import com.skillsync.skillsync.exception.ErrorCode;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import com.skillsync.skillsync.dto.request.upload.UpdateAvatarRequest;
 import com.skillsync.skillsync.dto.request.user.UpdateBioRequest;
@@ -78,6 +80,14 @@ public class UserService {
         return buildFullResponse(getCurrentUser());
     }
 
+    /** Public profile của bất kỳ user nào — dùng cho trang mentor profile */
+    public UserResponse getPublicProfile(java.util.UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new com.skillsync.skillsync.exception.AppException(
+                        com.skillsync.skillsync.exception.ErrorCode.NOT_FOUND));
+        return buildFullResponse(user);
+    }
+
     public List<CreditTransactionResponse> getMyTransactions() {
         User user = getCurrentUser();
         return creditTransactionRepository.findAllByUserIdOrderByCreatedAtDesc(user.getId())
@@ -94,7 +104,7 @@ public class UserService {
 
     public UserResponse updateAvatar(UpdateAvatarRequest request) {
         if (request.getFileKey() == null || request.getFileKey().isBlank())
-            throw new IllegalArgumentException("fileKey không được để trống");
+            throw new AppException(ErrorCode.INVALID_REQUEST, "fileKey không được để trống");
 
         User user = getCurrentUser();
 
@@ -117,7 +127,7 @@ public class UserService {
 
     public UserResponse setPassword(UpdatePasswordRequest request) {
         if (request.getNewPassword() == null || request.getNewPassword().length() < 8) {
-            throw new IllegalArgumentException("Mật khẩu phải có ít nhất 8 ký tự.");
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Mật khẩu phải có ít nhất 8 ký tự.");
         }
         User user = getCurrentUser();
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
@@ -145,10 +155,10 @@ public class UserService {
 
     public com.skillsync.skillsync.dto.response.admin.AdminUserResponse toggleUserBanStatus(java.util.UUID userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "User not found"));
 
         if (user.getRole() == com.skillsync.skillsync.enums.Role.ADMIN) {
-            throw new RuntimeException("Cannot ban an administrator.");
+            throw new AppException(ErrorCode.FORBIDDEN, "Cannot ban an administrator.");
         }
 
         if (user.getStatus() == com.skillsync.skillsync.enums.UserStatus.BANNED) {

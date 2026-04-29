@@ -187,16 +187,17 @@ public class UserTeachingSkillService {
     }
 
     public TeachingSkillResponse create(CreateTeachingSkillRequest request) {
-        if (request.getSkillId() == null) throw new IllegalArgumentException("skillId không được để trống");
-        if (request.getLevel() == null) throw new IllegalArgumentException("level không được để trống");
-        if (request.getExperienceDesc() == null || request.getExperienceDesc().isBlank())
-            throw new IllegalArgumentException("experienceDesc không được để trống");
-        if (request.getOutcomeDesc() == null || request.getOutcomeDesc().isBlank())
-            throw new IllegalArgumentException("outcomeDesc không được để trống");
-
+        if (request.getSkillId() == null) throw new AppException(ErrorCode.INVALID_REQUEST, "skillId không được để trống");
+        if (request.getLevel() == null) throw new AppException(ErrorCode.INVALID_REQUEST, "level không được để trống");
+        if (request.getExperienceDesc() == null || request.getExperienceDesc().trim().isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "experienceDesc không được để trống");
+        }
+        if (request.getOutcomeDesc() == null || request.getOutcomeDesc().trim().isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "outcomeDesc không được để trống");
+        }
         User user = userService.getCurrentUser();
         Skill skill = skillRepository.findById(request.getSkillId())
-                .orElseThrow(() -> new RuntimeException("Skill không tồn tại"));
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Skill không tồn tại"));
 
         if (teachingSkillRepository.existsByUserIdAndSkillIdAndLevel(user.getId(), skill.getId(), request.getLevel())) {
             throw new AppException(ErrorCode.TEACHING_SKILL_DUPLICATE,
@@ -223,7 +224,7 @@ public class UserTeachingSkillService {
 
         User user = userService.getCurrentUser();
         if (!ts.getUser().getId().equals(user.getId()))
-            throw new RuntimeException("Bạn không có quyền xóa teaching skill này");
+            throw new AppException(ErrorCode.FORBIDDEN, "Bạn không có quyền xóa teaching skill này");
 
         // Xóa file evidence trên R2
         evidenceRepository.findByTeachingSkillId(id).forEach(ev -> {
@@ -243,7 +244,7 @@ public class UserTeachingSkillService {
 
         User user = userService.getCurrentUser();
         if (!ts.getUser().getId().equals(user.getId()))
-            throw new RuntimeException("Bạn không có quyền sửa giá teaching skill này");
+            throw new AppException(ErrorCode.FORBIDDEN, "Bạn không có quyền sửa giá teaching skill này");
 
         ts.setCreditsPerHour(newPrice);
         teachingSkillRepository.save(ts);
@@ -258,7 +259,7 @@ public class UserTeachingSkillService {
 
         User user = userService.getCurrentUser();
         if (!ts.getUser().getId().equals(user.getId()))
-            throw new RuntimeException("Bạn không có quyền thay đổi kỹ năng này");
+            throw new AppException(ErrorCode.FORBIDDEN, "Bạn không có quyền thay đổi kỹ năng này");
 
         if (ts.getVerificationStatus() != com.skillsync.skillsync.enums.VerificationStatus.APPROVED) {
             throw new AppException(ErrorCode.INVALID_REQUEST,

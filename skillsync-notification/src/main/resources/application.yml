@@ -4,12 +4,16 @@ server:
     context-path: /notification
 
 spring:
-  # ── Mail ────────────────────────────────────────────────────────────────────
+  # Mặc định chạy local — tránh kết nối Aiven + SASL_SSL khi IDE vẫn có biến KAFKA_*.
+  # Cloud: --spring.profiles.active=pro hoặc SPRING_PROFILES_ACTIVE=pro
+  profiles:
+    default: local
+
   mail:
     host: smtp.gmail.com
     port: 587
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -21,24 +25,6 @@ spring:
           timeout: 5000
           writetimeout: 5000
 
-  # ── Kafka ─────────────────────────────────────────────────────────────────
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    consumer:
-      group-id: skillsync-notification-group
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: "com.skillsync.notification.dto.event"
-        spring.json.use.type.headers: false
-        # Increase max.poll.interval.ms to 15 minutes to allow Blocking Retries
-        max.poll.interval.ms: 900000
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-
-  # ── Thymeleaf ───────────────────────────────────────────────────────────────
   thymeleaf:
     prefix: classpath:/templates/email/
     suffix: .html
@@ -46,14 +32,12 @@ spring:
     encoding: UTF-8
     cache: false
 
-# ── App Config ─────────────────────────────────────────────────────────────────
 app:
   mail:
     sender-name: ${MAIL_SENDER_NAME:SkillSync}
-    sender-email: ${MAIL_SENDER_EMAIL:${MAIL_USERNAME}}
+    sender-email: ${MAIL_SENDER_EMAIL:${MAIL_USERNAME:}}
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
 
-# ── Kafka Topics ───────────────────────────────────────────────────────────────
 kafka:
   topics:
     auth: skillsync.notification.auth

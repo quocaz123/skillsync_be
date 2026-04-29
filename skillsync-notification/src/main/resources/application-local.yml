@@ -1,0 +1,26 @@
+# Profile local: Kafka PLAINTEXT. Broker mặc định localhost:9092 (khớp docker-compose.yml).
+# Bật broker: từ thư mục skillsync chạy:  docker compose up -d zookeeper kafka
+# Chưa có Kafka nhưng vẫn muốn chạy app (chỉ test mail/API): đặt KAFKA_LISTENER_AUTO_STARTUP=false
+# trong Run Configuration hoặc biến môi trường — consumer sẽ không kết nối, hết cảnh báo spam.
+spring:
+  kafka:
+    bootstrap-servers: localhost:9092
+    listener:
+      auto-startup: ${KAFKA_LISTENER_AUTO_STARTUP:true}
+    consumer:
+      group-id: skillsync-notification-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.skillsync.notification.dto.event"
+        spring.json.use.type.headers: false
+        max.poll.interval.ms: 900000
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: false
+    properties:
+      sasl-username: ""
+      sasl-password: ""

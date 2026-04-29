@@ -47,6 +47,10 @@ public class SessionReportService {
             throw new AppException(ErrorCode.FORBIDDEN);
         }
 
+        if (reportRepository.existsBySessionId(sessionId)) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
         User reportedUser = isLearner ? session.getTeacher() : session.getLearner();
 
         // Check if money is already transferred. 

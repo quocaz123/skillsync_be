@@ -3,6 +3,8 @@ package com.skillsync.skillsync.service;
 import com.skillsync.skillsync.dto.request.forum.CreateCategoryRequest;
 import com.skillsync.skillsync.dto.response.forum.ForumCategoryResponse;
 import com.skillsync.skillsync.entity.ForumCategory;
+import com.skillsync.skillsync.exception.AppException;
+import com.skillsync.skillsync.exception.ErrorCode;
 import com.skillsync.skillsync.repository.ForumCategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -35,7 +37,7 @@ public class ForumCategoryService {
      */
     public ForumCategoryResponse getCategoryById(UUID id) {
         ForumCategory category = categoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category not found with id: " + id));
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Category not found with id: " + id));
         return toResponse(category);
     }
 
@@ -45,7 +47,7 @@ public class ForumCategoryService {
     @Transactional
     public ForumCategoryResponse createCategory(CreateCategoryRequest request) {
         if (categoryRepository.existsByName(request.getName())) {
-            throw new RuntimeException("Category with name '" + request.getName() + "' already exists");
+            throw new AppException(ErrorCode.CATEGORY_ALREADY_EXISTS, "Category with name '" + request.getName() + "' already exists");
         }
 
         ForumCategory category = ForumCategory.builder()
@@ -65,11 +67,11 @@ public class ForumCategoryService {
     @Transactional
     public ForumCategoryResponse updateCategory(UUID id, CreateCategoryRequest request) {
         ForumCategory category = categoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category not found with id: " + id));
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Category not found with id: " + id));
 
         if (request.getName() != null && !request.getName().equals(category.getName())) {
             if (categoryRepository.existsByName(request.getName())) {
-                throw new RuntimeException("Category with name '" + request.getName() + "' already exists");
+                throw new AppException(ErrorCode.CATEGORY_ALREADY_EXISTS, "Category with name '" + request.getName() + "' already exists");
             }
             category.setName(request.getName());
         }
@@ -94,7 +96,7 @@ public class ForumCategoryService {
     @Transactional
     public void deleteCategory(UUID id) {
         ForumCategory category = categoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category not found with id: " + id));
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Category not found with id: " + id));
 
         categoryRepository.delete(category);
     }
