@@ -17,6 +17,12 @@ import com.skillsync.skillsync.repository.*;
 import com.skillsync.skillsync.entity.UserTeachingSkill;
 import com.skillsync.skillsync.enums.VerificationStatus;
 import com.skillsync.skillsync.enums.SkillLevel;
+import com.skillsync.skillsync.entity.LearningPath;
+import com.skillsync.skillsync.entity.LearningPathEnrollment;
+import com.skillsync.skillsync.entity.LearningPathLesson;
+import com.skillsync.skillsync.entity.LearningPathModule;
+import com.skillsync.skillsync.enums.LearningPathStatus;
+import com.skillsync.skillsync.enums.RegistrationType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -40,6 +46,8 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final SkillRepository skillRepository;
+    private final LearningPathRepository learningPathRepository;
+    private final LearningPathEnrollmentRepository learningPathEnrollmentRepository;
     private final CreditMissionRepository creditMissionRepository;
     private final ForumCategoryRepository forumCategoryRepository;
     private final ForumPostRepository forumPostRepository;
@@ -65,6 +73,7 @@ public class DataInitializer implements CommandLineRunner {
         seedUser("hotuanl@gmail.com", "User@123", Role.USER, "Hồ Tuấn Lộc");
         seedSkills();
         seedTeachingSkills(); // Thêm dữ liệu test AI
+        seedSystemLearningPaths(); // Seed 10 lộ trình hệ thống cho trang Explore
         seedForumCategories();
         backfillForumPostStatuses();
         seedMissions();
@@ -283,5 +292,264 @@ public class DataInitializer implements CommandLineRunner {
         log.info("✅ Seeded {} default missions", defaultMissions.size());
     }
 
+    // ─── Learning Paths (System) ─────────────────────────────────────────
+
+    /**
+     * Seed 10 learning paths hệ thống (teacher = admin) để FE hiển thị sẵn khi chạy.
+     *
+     * Idempotent: nếu đã có path mang prefix seed thì bỏ qua.
+     */
+    private void seedSystemLearningPaths() {
+        final String prefix = "SYS_SEED_";
+        List<LearningPath> seededPaths = learningPathRepository.findAll().stream()
+                .filter(lp -> lp.getTitle() != null && lp.getTitle().startsWith(prefix))
+                .toList();
+
+        var adminOpt = userRepository.findByEmail("admin@skillsync.com");
+        if (adminOpt.isEmpty()) {
+            log.warn("⚠️ Không tìm thấy admin@skillsync.com để seed system learning paths");
+            return;
+        }
+        User admin = adminOpt.get();
+
+        record LessonDef(String title, String videoUrl, int durationMinutes, boolean isPreview) {}
+        record ModuleDef(String title, boolean enableSupport, boolean hasQuiz, List<LessonDef> lessons) {}
+        record PathDef(String title, String shortDescription, SkillCategory category, SkillLevel level, int totalCredits, List<ModuleDef> modules) {}
+
+        List<PathDef> defs = List.of(
+                new PathDef("SYS_SEED_1 React Fundamentals", "React cho người mới bắt đầu", SkillCategory.TECH, SkillLevel.BEGINNER, 0,
+                        List.of(
+                                new ModuleDef("Module 1 - Intro React", false, false, List.of(
+                                        new LessonDef("Bài 1 - Setup project", "https://www.youtube.com/watch?v=dQw4w9WgXcQ", 10, true),
+                                        new LessonDef("Bài 2 - Components cơ bản", "https://www.youtube.com/watch?v=3JZ_D3ELwOQ", 12, true)
+                                )),
+                                new ModuleDef("Module 2 - State & Props", true, false, List.of(
+                                        new LessonDef("Bài 1 - Props", "https://www.youtube.com/watch?v=0KSOMA3QBU", 11, false),
+                                        new LessonDef("Bài 2 - State", "https://www.youtube.com/watch?v=tAGnKpE4NCI", 14, false)
+                                ))
+                        )
+                ),
+                new PathDef("SYS_SEED_2 JavaScript cho người đi làm", "Nắm vững JavaScript thực chiến", SkillCategory.TECH, SkillLevel.INTERMEDIATE, 20,
+                        List.of(
+                                new ModuleDef("Module 1 - ES Modules", false, false, List.of(
+                                        new LessonDef("Bài 1 - Import/Export", "https://www.youtube.com/watch?v=YQHsXMglC9A", 10, true),
+                                        new LessonDef("Bài 2 - Async/Await", "https://www.youtube.com/watch?v=2Z4G-8vKkYI", 15, true)
+                                )),
+                                new ModuleDef("Module 2 - Patterns", true, false, List.of(
+                                        new LessonDef("Bài 1 - Closures", "https://www.youtube.com/watch?v=aqz-KE-bpKQ", 12, false),
+                                        new LessonDef("Bài 2 - Design patterns", "https://www.youtube.com/watch?v=J---aiyznGQ", 16, false)
+                                ))
+                        )
+                ),
+                new PathDef("SYS_SEED_3 SQL từ con số 0", "SQL nền tảng để phân tích dữ liệu", SkillCategory.TECH, SkillLevel.BEGINNER, 0,
+                        List.of(
+                                new ModuleDef("Module 1 - SELECT & JOIN", false, false, List.of(
+                                        new LessonDef("Bài 1 - SELECT", "https://www.youtube.com/watch?v=HXV3zeQKqUE", 10, true),
+                                        new LessonDef("Bài 2 - JOIN", "https://www.youtube.com/watch?v=9InZQeQ6Qk8", 12, true)
+                                )),
+                                new ModuleDef("Module 2 - Aggregation", false, true, List.of(
+                                        new LessonDef("Bài 1 - GROUP BY", "https://www.youtube.com/watch?v=RiOv1vG2K2s", 11, false),
+                                        new LessonDef("Bài 2 - Window functions", "https://www.youtube.com/watch?v=GNq9v8n9b5k", 14, false)
+                                ))
+                        )
+                ),
+                new PathDef("SYS_SEED_4 UI/UX cơ bản với Figma", "Từ wireframe đến prototype", SkillCategory.DESIGN, SkillLevel.BEGINNER, 0,
+                        List.of(
+                                new ModuleDef("Module 1 - Figma basics", false, false, List.of(
+                                        new LessonDef("Bài 1 - Frames", "https://www.youtube.com/watch?v=ysz5S6PUM-U", 10, true),
+                                        new LessonDef("Bài 2 - Components", "https://www.youtube.com/watch?v=aqz-KE-bpKQ", 12, true)
+                                )),
+                                new ModuleDef("Module 2 - Prototype", true, false, List.of(
+                                        new LessonDef("Bài 1 - Auto layout", "https://www.youtube.com/watch?v=9n3eaGFDqQ0", 11, false),
+                                        new LessonDef("Bài 2 - Handoff", "https://www.youtube.com/watch?v=G3p9eG3Q4mI", 14, false)
+                                ))
+                        )
+                ),
+                new PathDef("SYS_SEED_5 Machine Learning nền tảng", "Tư duy ML và mô hình cơ bản", SkillCategory.DATA, SkillLevel.INTERMEDIATE, 30,
+                        List.of(
+                                new ModuleDef("Module 1 - Supervised learning", true, true, List.of(
+                                        new LessonDef("Bài 1 - Regression", "https://www.youtube.com/watch?v=GmXwQx9G6fA", 10, true),
+                                        new LessonDef("Bài 2 - Classification", "https://www.youtube.com/watch?v=aircAruvnKk", 15, true)
+                                )),
+                                new ModuleDef("Module 2 - Evaluation", true, false, List.of(
+                                        new LessonDef("Bài 1 - Metrics", "https://www.youtube.com/watch?v=3cX5F5X0k8k", 12, false),
+                                        new LessonDef("Bài 2 - Cross-validation", "https://www.youtube.com/watch?v=VbfpW5p2d9o", 16, false)
+                                ))
+                        )
+                ),
+                new PathDef("SYS_SEED_6 English for work", "Giao tiếp tiếng Anh trong môi trường công việc", SkillCategory.LANGUAGE, SkillLevel.INTERMEDIATE, 25,
+                        List.of(
+                                new ModuleDef("Module 1 - Email & meetings", false, false, List.of(
+                                        new LessonDef("Bài 1 - Email templates", "https://www.youtube.com/watch?v=kJQP7kiw5Fk", 10, true),
+                                        new LessonDef("Bài 2 - Meeting phrases", "https://www.youtube.com/watch?v=ScMzIvxBSi4", 15, true)
+                                )),
+                                new ModuleDef("Module 2 - Presentations", true, true, List.of(
+                                        new LessonDef("Bài 1 - Structure slides", "https://www.youtube.com/watch?v=2Vv-BfVoq4g", 12, false),
+                                        new LessonDef("Bài 2 - Q&A handling", "https://www.youtube.com/watch?v=hTWtf2vVfZs", 16, false)
+                                ))
+                        )
+                ),
+                new PathDef("SYS_SEED_7 Giao tiếp & thuyết trình", "Kỹ năng mềm để tự tin hơn", SkillCategory.SOFT_SKILL, SkillLevel.BEGINNER, 0,
+                        List.of(
+                                new ModuleDef("Module 1 - Body language", false, false, List.of(
+                                        new LessonDef("Bài 1 - Eye contact", "https://www.youtube.com/watch?v=0hR2eZk6FqQ", 10, true),
+                                        new LessonDef("Bài 2 - Voice control", "https://www.youtube.com/watch?v=CZgkq3p0vW4", 12, true)
+                                )),
+                                new ModuleDef("Module 2 - Storytelling", true, false, List.of(
+                                        new LessonDef("Bài 1 - Open with hook", "https://www.youtube.com/watch?v=E7wJTI-1dvQ", 11, false),
+                                        new LessonDef("Bài 2 - Closing strong", "https://www.youtube.com/watch?v=fLexgOxsZu0", 14, false)
+                                ))
+                        )
+                ),
+                new PathDef("SYS_SEED_8 Business Analysis essentials", "Phân tích yêu cầu và dữ liệu", SkillCategory.BUSINESS, SkillLevel.INTERMEDIATE, 35,
+                        List.of(
+                                new ModuleDef("Module 1 - Requirements", true, false, List.of(
+                                        new LessonDef("Bài 1 - User stories", "https://www.youtube.com/watch?v=uel1gA4zqG8", 10, true),
+                                        new LessonDef("Bài 2 - Acceptance criteria", "https://www.youtube.com/watch?v=7NOSDKb8w5M", 15, true)
+                                )),
+                                new ModuleDef("Module 2 - Data reasoning", true, true, List.of(
+                                        new LessonDef("Bài 1 - Hypothesis", "https://www.youtube.com/watch?v=F2g5j7JYf7I", 12, false),
+                                        new LessonDef("Bài 2 - Decision making", "https://www.youtube.com/watch?v=Zi_XLOBBiJY", 16, false)
+                                ))
+                        )
+                ),
+                new PathDef("SYS_SEED_9 Career & portfolio", "Xây portfolio để ứng tuyển hiệu quả", SkillCategory.CAREER, SkillLevel.BEGINNER, 0,
+                        List.of(
+                                new ModuleDef("Module 1 - Portfolio basics", false, false, List.of(
+                                        new LessonDef("Bài 1 - Project selection", "https://www.youtube.com/watch?v=Z9T1o0cFv0Y", 10, true),
+                                        new LessonDef("Bài 2 - Writing README", "https://www.youtube.com/watch?v=O6p86uwd7pI", 12, true)
+                                )),
+                                new ModuleDef("Module 2 - Demo & interview", true, false, List.of(
+                                        new LessonDef("Bài 1 - Elevator pitch", "https://www.youtube.com/watch?v=Zi_XLOBBiJY", 11, false),
+                                        new LessonDef("Bài 2 - Mock interview", "https://www.youtube.com/watch?v=uel1gA4zqG8", 14, false)
+                                ))
+                        )
+                ),
+                new PathDef("SYS_SEED_10 Advanced React patterns", "Tối ưu và nâng cấp kiến trúc", SkillCategory.TECH, SkillLevel.ADVANCED, 40,
+                        List.of(
+                                new ModuleDef("Module 1 - Performance", true, true, List.of(
+                                        new LessonDef("Bài 1 - Memoization", "https://www.youtube.com/watch?v=1Leq2GJkJgE", 10, true),
+                                        new LessonDef("Bài 2 - Rendering strategy", "https://www.youtube.com/watch?v=Y2hVQm5b1z8", 15, true)
+                                )),
+                                new ModuleDef("Module 2 - Architecture", true, false, List.of(
+                                        new LessonDef("Bài 1 - Feature folders", "https://www.youtube.com/watch?v=J---aiyznGQ", 12, false),
+                                        new LessonDef("Bài 2 - Testing approach", "https://www.youtube.com/watch?v=aqz-KE-bpKQ", 16, false)
+                                ))
+                        )
+                )
+        );
+
+        if (seededPaths.isEmpty()) {
+            int seeded = 0;
+            for (PathDef def : defs) {
+                LearningPath lp = LearningPath.builder()
+                        .teacher(admin)
+                        .title(def.title())
+                        .shortDescription(def.shortDescription())
+                        .description(def.shortDescription())
+                        .category(def.category())
+                        .level(def.level())
+                        .duration("6 tuần")
+                        .emoji("📚")
+                        .thumbnailUrl(null)
+                        .totalCredits(def.totalCredits())
+                        .maxStudents(999)
+                        .registrationType(RegistrationType.AUTO)
+                        .status(LearningPathStatus.APPROVED)
+                        .modules(new ArrayList<>())
+                        .enrollments(new ArrayList<>())
+                        .build();
+
+                LearningPath saved = learningPathRepository.save(lp);
+
+                List<LearningPathModule> modules = new ArrayList<>();
+                for (int mi = 0; mi < def.modules().size(); mi++) {
+                    ModuleDef m = def.modules().get(mi);
+                    LearningPathModule module = LearningPathModule.builder()
+                            .learningPath(saved)
+                            .title(m.title())
+                            .description("")
+                            .objective("")
+                            .orderIndex(mi)
+                            .enableSupport(m.enableSupport())
+                            .hasQuiz(m.hasQuiz())
+                            .isQuizMandatory(false)
+                            .sessionsNeeded(0)
+                            .lessons(new ArrayList<>())
+                            .build();
+
+                    for (int li = 0; li < m.lessons().size(); li++) {
+                        LessonDef l = m.lessons().get(li);
+                        LearningPathLesson lesson = LearningPathLesson.builder()
+                                .module(module)
+                                .title(l.title())
+                                .description("")
+                                .videoUrl(l.videoUrl())
+                                .durationMinutes(l.durationMinutes())
+                                .isPreview(l.isPreview())
+                                .orderIndex(li)
+                                .build();
+                        module.getLessons().add(lesson);
+                    }
+
+                    modules.add(module);
+                }
+
+                saved.getModules().addAll(modules);
+                learningPathRepository.save(saved);
+                seeded++;
+            }
+            log.info("✅ Seeded {} system learning paths", seeded);
+            seededPaths = learningPathRepository.findAll().stream()
+                    .filter(lp -> lp.getTitle() != null && lp.getTitle().startsWith(prefix))
+                    .toList();
+        }
+
+        // ─── Auto-enroll into seeded paths for user@skillsync.com ────────────
+        // Mục tiêu: chạy lên là có sẵn 10 khóa để test "Đang học".
+        var studentOpt = userRepository.findByEmail("user@skillsync.com");
+        if (studentOpt.isEmpty()) {
+            log.warn("⚠️ Không tìm thấy user@skillsync.com để auto-enroll");
+            return;
+        }
+        User student = studentOpt.get();
+        int desiredCredits = 1000;
+        Integer balance = student.getCreditsBalance() != null ? student.getCreditsBalance() : 0;
+        if (balance < desiredCredits) {
+            student.setCreditsBalance(desiredCredits);
+            userRepository.save(student);
+        }
+
+        int enrolledCount = 0;
+        for (LearningPath lp : seededPaths) {
+            if (learningPathEnrollmentRepository.existsByLearningPathIdAndStudentId(lp.getId(), student.getId())) {
+                continue;
+            }
+
+            int cost = lp.getTotalCredits() != null ? lp.getTotalCredits() : 0;
+            int currentBalance = student.getCreditsBalance() != null ? student.getCreditsBalance() : 0;
+            if (cost > currentBalance) {
+                log.info("⏩ Skip enroll '{}' (cost={} > balance={})", lp.getTitle(), cost, currentBalance);
+                continue;
+            }
+
+            if (cost > 0) {
+                student.setCreditsBalance(currentBalance - cost);
+                userRepository.save(student);
+            }
+
+            LearningPathEnrollment enrollment = LearningPathEnrollment.builder()
+                    .learningPath(lp)
+                    .student(student)
+                    .learnerId(student.getId())
+                    .progressPercent(0)
+                    .status("ENROLLED")
+                    .build();
+            learningPathEnrollmentRepository.save(enrollment);
+            enrolledCount++;
+        }
+
+        log.info("✅ Auto-enrolled {} seeded paths for user@skillsync.com", enrolledCount);
+    }
 
 }
