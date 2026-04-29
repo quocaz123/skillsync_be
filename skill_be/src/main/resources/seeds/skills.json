@@ -1,36 +1,53 @@
 [
-  { "name": "Java", "category": "TECH", "icon": "CoffeeBean" },
-  { "name": "Python", "category": "TECH", "icon": "Snake" },
-  { "name": "JavaScript", "category": "TECH", "icon": "GlobeHemisphereWest" },
-  { "name": "TypeScript", "category": "TECH", "icon": "Diamond" },
-  { "name": "React", "category": "TECH", "icon": "Atom" },
-  { "name": "SQL", "category": "TECH", "icon": "Database" },
-  { "name": "Git", "category": "TECH", "icon": "GitBranch" },
+  { "name": "Java",              "category": "TECH",      "icon": "CoffeeBean" },
+  { "name": "Python",            "category": "TECH",      "icon": "Snake" },
+  { "name": "JavaScript",        "category": "TECH",      "icon": "GlobeHemisphereWest" },
+  { "name": "TypeScript",        "category": "TECH",      "icon": "Diamond" },
+  { "name": "React",             "category": "TECH",      "icon": "Atom" },
+  { "name": "Vue.js",            "category": "TECH",      "icon": "Leaf" },
+  { "name": "Node.js",           "category": "TECH",      "icon": "HardDrives" },
+  { "name": "Spring Boot",       "category": "TECH",      "icon": "Leaf" },
+  { "name": "SQL",               "category": "TECH",      "icon": "Database" },
+  { "name": "Git",               "category": "TECH",      "icon": "GitBranch" },
+  { "name": "Docker",            "category": "TECH",      "icon": "Cube" },
+  { "name": "Flutter",           "category": "TECH",      "icon": "DeviceMobile" },
+  { "name": "C++",               "category": "TECH",      "icon": "Code" },
+  { "name": "Kotlin",            "category": "TECH",      "icon": "AndroidLogo" },
 
-  { "name": "Machine Learning", "category": "DATA", "icon": "Robot" },
-  { "name": "Data Analysis", "category": "DATA", "icon": "ChartBar" },
-  { "name": "Power BI", "category": "DATA", "icon": "TrendingUp" },
+  { "name": "Machine Learning",  "category": "DATA",      "icon": "Robot" },
+  { "name": "Data Analysis",     "category": "DATA",      "icon": "ChartBar" },
+  { "name": "Power BI",          "category": "DATA",      "icon": "ChartLine" },
+  { "name": "Excel",             "category": "DATA",      "icon": "Table" },
 
-  { "name": "UI/UX Design", "category": "DESIGN", "icon": "Palette" },
-  { "name": "Figma", "category": "DESIGN", "icon": "PencilSimple" },
+  { "name": "UI/UX Design",      "category": "DESIGN",    "icon": "Palette" },
+  { "name": "Figma",             "category": "DESIGN",    "icon": "PencilSimple" },
+  { "name": "Photoshop",         "category": "DESIGN",    "icon": "Image" },
+  { "name": "Illustrator",       "category": "DESIGN",    "icon": "PenNib" },
 
-  { "name": "Quản Lý Dự Án", "category": "BUSINESS", "icon": "FolderOpen" },
-  {
-    "name": "Business Analysis",
-    "category": "BUSINESS",
-    "icon": "MagnifyingGlass"
-  },
+  { "name": "Quản Lý Dự Án",     "category": "BUSINESS",  "icon": "FolderOpen" },
+  { "name": "Business Analysis", "category": "BUSINESS",  "icon": "MagnifyingGlass" },
+  { "name": "Khởi Nghiệp",       "category": "BUSINESS",  "icon": "Rocket" },
 
   { "name": "Digital Marketing", "category": "MARKETING", "icon": "Megaphone" },
-  { "name": "SEO", "category": "MARKETING", "icon": "MagnifyingGlass" },
+  { "name": "SEO",               "category": "MARKETING", "icon": "MagnifyingGlass" },
+  { "name": "Content Marketing", "category": "MARKETING", "icon": "Article" },
 
-  {
-    "name": "Tài Chính Cá Nhân",
-    "category": "FINANCE",
-    "icon": "CurrencyDollar"
-  },
-  { "name": "Tiếng Anh", "category": "LANGUAGE", "icon": "Flag" },
+  { "name": "Tài Chính Cá Nhân", "category": "FINANCE",   "icon": "CurrencyDollar" },
+  { "name": "Đầu Tư Chứng Khoán","category": "FINANCE",   "icon": "TrendUp" },
 
-  { "name": "Giao Tiếp", "category": "SOFT_SKILL", "icon": "SpeakerHigh" },
-  { "name": "Thuyết Trình", "category": "SOFT_SKILL", "icon": "Microphone" }
+  { "name": "Tiếng Anh",         "category": "LANGUAGE",  "icon": "Flag" },
+  { "name": "Tiếng Nhật",        "category": "LANGUAGE",  "icon": "SunHorizon" },
+  { "name": "Tiếng Trung",       "category": "LANGUAGE",  "icon": "Globe" },
+  { "name": "Tiếng Hàn",         "category": "LANGUAGE",  "icon": "Globe" },
+
+  { "name": "Giao Tiếp",         "category": "SOFT_SKILL","icon": "SpeakerHigh" },
+  { "name": "Thuyết Trình",      "category": "SOFT_SKILL","icon": "Microphone" },
+  { "name": "Lãnh Đạo",          "category": "SOFT_SKILL","icon": "Users" },
+  { "name": "Tư Duy Phản Biện",  "category": "SOFT_SKILL","icon": "Brain" },
+
+  { "name": "Piano",             "category": "CREATIVE",  "icon": "MusicNote" },
+  { "name": "Guitar",            "category": "CREATIVE",  "icon": "MusicNote" },
+  { "name": "Vẽ Tranh",          "category": "CREATIVE",  "icon": "PaintBrush" },
+  { "name": "Chụp Ảnh",          "category": "CREATIVE",  "icon": "Camera" },
+  { "name": "Làm Video",         "category": "CREATIVE",  "icon": "VideoCamera" }
 ]

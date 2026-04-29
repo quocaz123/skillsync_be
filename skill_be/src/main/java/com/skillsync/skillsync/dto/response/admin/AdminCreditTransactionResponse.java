@@ -18,5 +18,7 @@ public class AdminCreditTransactionResponse {
     private TransactionType transactionType;
     private String description;
     private UUID referenceId;
+    private String userId;
+    private Integer userBalance;
     private LocalDateTime createdAt;
 }

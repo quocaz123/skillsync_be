@@ -6,6 +6,8 @@ import com.skillsync.skillsync.entity.TeachingSkillEvidence;
 import com.skillsync.skillsync.entity.User;
 import com.skillsync.skillsync.entity.UserTeachingSkill;
 import com.skillsync.skillsync.enums.VerificationStatus;
+import com.skillsync.skillsync.exception.AppException;
+import com.skillsync.skillsync.exception.ErrorCode;
 import com.skillsync.skillsync.repository.TeachingSkillEvidenceRepository;
 import com.skillsync.skillsync.repository.UserTeachingSkillRepository;
 import lombok.RequiredArgsConstructor;
@@ -38,14 +40,14 @@ public class AdminTeachingSkillService {
     @Transactional
     public AdminTeachingSkillResponse verify(UUID teachingSkillId, VerifyTeachingSkillRequest request) {
         UserTeachingSkill ts = teachingSkillRepository.findById(teachingSkillId)
-                .orElseThrow(() -> new RuntimeException("Teaching skill không tồn tại"));
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Teaching skill không tồn tại"));
 
         if (!"APPROVED".equalsIgnoreCase(request.getAction()) && !"REJECTED".equalsIgnoreCase(request.getAction()))
-            throw new IllegalArgumentException("action phải là APPROVED hoặc REJECTED");
+            throw new AppException(ErrorCode.INVALID_REQUEST, "action phải là APPROVED hoặc REJECTED");
 
         if ("REJECTED".equalsIgnoreCase(request.getAction()) &&
                 (request.getRejectionReason() == null || request.getRejectionReason().isBlank()))
-            throw new IllegalArgumentException("rejectionReason bắt buộc khi từ chối");
+            throw new AppException(ErrorCode.INVALID_REQUEST, "rejectionReason bắt buộc khi từ chối");
 
         User admin = userService.getCurrentUser();
 

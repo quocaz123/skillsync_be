@@ -12,4 +12,5 @@ import java.util.UUID;
 public interface SessionReportRepository extends JpaRepository<SessionReport, UUID> {
     List<SessionReport> findByStatusOrderByCreatedAtDesc(ReportStatus status);
     List<SessionReport> findBySessionId(UUID sessionId);
+    boolean existsBySessionId(UUID sessionId);
 }

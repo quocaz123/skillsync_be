@@ -53,18 +53,28 @@ public class SkillDataSeeder implements ApplicationRunner {
     public void run(ApplicationArguments args) throws Exception {
         log.info("[SkillSeeder] ══ Bắt đầu seed skills ══");
 
-        // Nếu đã seed đầy đủ (skills + embeddings) thì chạy đúng 1 lần rồi thôi
-        long totalSkills = skillRepository.count();
-        int embeddedSkills = skillVectorRepository.countEmbedded();
-        if (totalSkills > 0 && embeddedSkills >= totalSkills) {
-            log.info("[SkillSeeder] Bỏ qua: đã có {}/{} skills có embedding.", embeddedSkills, totalSkills);
-            return;
-        }
-
         List<Map<String, String>> seedData = loadSeedFile();
         if (seedData == null || seedData.isEmpty()) {
             log.warn("[SkillSeeder] skills.json rỗng hoặc không đọc được, bỏ qua.");
             return;
+        }
+
+        // Kiểm tra xem có skill nào trong JSON chưa có trong DB không
+        long jsonCount   = seedData.stream().filter(m -> m.get("name") != null && !m.get("name").isBlank()).count();
+        long dbCount     = skillRepository.count();
+        int embeddedSkills = skillVectorRepository.countEmbedded();
+
+        boolean allSkillsExist = dbCount >= jsonCount;
+        boolean allEmbedded    = embeddedSkills >= dbCount;
+
+        if (allSkillsExist && allEmbedded) {
+            log.info("[SkillSeeder] Bỏ qua: đã có {}/{} skills với đủ embeddings.", embeddedSkills, dbCount);
+            return;
+        }
+
+        if (!allSkillsExist) {
+            log.info("[SkillSeeder] Phát hiện {} skill mới trong JSON (DB hiện có {}), sẽ insert thêm.",
+                    jsonCount - dbCount, dbCount);
         }
 
         // Probe một lần duy nhất trước khi loop — tránh 20×2 lần gọi API khi không có model nào

@@ -10,4 +10,10 @@ public class AppException extends RuntimeException {
         super(errorCode.getMessage());
         this.errorCode = errorCode;
     }
+
+    /** Giữ mã lỗi chuẩn nhưng thông báo chi tiết (ví dụ kèm tên kỹ năng). */
+    public AppException(ErrorCode errorCode, String message) {
+        super(message);
+        this.errorCode = errorCode;
+    }
 }

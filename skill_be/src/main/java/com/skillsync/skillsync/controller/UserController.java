@@ -53,4 +53,10 @@ public class UserController {
     public ApiResponse<UserResponse> setPassword(@RequestBody UpdatePasswordRequest request) {
         return ApiResponse.success(userService.setPassword(request));
     }
+
+    /** Lấy public profile của bất kỳ user nào (hiển thị trang Mentor) */
+    @GetMapping("/{id}/profile")
+    public ApiResponse<UserResponse> getPublicProfile(@PathVariable java.util.UUID id) {
+        return ApiResponse.success(userService.getPublicProfile(id));
+    }
 }

@@ -6,6 +6,8 @@ import com.skillsync.skillsync.entity.PostVote;
 import com.skillsync.skillsync.entity.User;
 import com.skillsync.skillsync.enums.ForumPostStatus;
 import com.skillsync.skillsync.enums.VoteType;
+import com.skillsync.skillsync.exception.AppException;
+import com.skillsync.skillsync.exception.ErrorCode;
 import com.skillsync.skillsync.repository.ForumPostRepository;
 import com.skillsync.skillsync.repository.PostVoteRepository;
 import lombok.RequiredArgsConstructor;
@@ -103,7 +105,7 @@ public class PostVoteService {
         boolean isAdmin = currentUser != null && currentUser.getRole() != null && "ADMIN".equalsIgnoreCase(currentUser.getRole().name());
         boolean isAuthor = currentUser != null && post.getAuthor() != null && post.getAuthor().getId().equals(currentUser.getId());
         if (post.getStatus() != ForumPostStatus.APPROVED && !isAdmin && !isAuthor) {
-            throw new RuntimeException("Post not found with id: " + post.getId());
+            throw new AppException(ErrorCode.NOT_FOUND, "Post not found with id: " + post.getId());
         }
     }
 

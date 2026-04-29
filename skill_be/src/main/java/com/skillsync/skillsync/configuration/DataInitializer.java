@@ -12,12 +12,11 @@ import com.skillsync.skillsync.enums.SkillCategory;
 
 import com.skillsync.skillsync.entity.CreditMission;
 import com.skillsync.skillsync.enums.MissionType;
-import com.skillsync.skillsync.repository.CreditMissionRepository;
+import com.skillsync.skillsync.repository.*;
 
-import com.skillsync.skillsync.repository.ForumCategoryRepository;
-import com.skillsync.skillsync.repository.ForumPostRepository;
-import com.skillsync.skillsync.repository.SkillRepository;
-import com.skillsync.skillsync.repository.UserRepository;
+import com.skillsync.skillsync.entity.UserTeachingSkill;
+import com.skillsync.skillsync.enums.VerificationStatus;
+import com.skillsync.skillsync.enums.SkillLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -29,6 +28,9 @@ import java.io.InputStream;
 
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Random;
 
 @Component
 @RequiredArgsConstructor
@@ -41,14 +43,28 @@ public class DataInitializer implements CommandLineRunner {
     private final CreditMissionRepository creditMissionRepository;
     private final ForumCategoryRepository forumCategoryRepository;
     private final ForumPostRepository forumPostRepository;
+    private final UserTeachingSkillRepository userTeachingSkillRepository;
 
     private final ObjectMapper objectMapper;
 
     @Override
     public void run(String... args) {
-        seedUser("admin@skillsync.com", "Admin@123", Role.ADMIN);
-        seedUser("user@skillsync.com",  "User@123",  Role.USER);
+        seedUser("admin@skillsync.com", "Admin@123", Role.ADMIN, "System Admin");
+        seedUser("user@skillsync.com",  "User@123",  Role.USER,  "Standard User");
+
+        // Danh sách 10 user mẫu
+        seedUser("nguyenvana@gmail.com", "User@123", Role.USER, "Nguyễn Văn An");
+        seedUser("tranthib@gmail.com", "User@123", Role.USER, "Trần Thị Bình");
+        seedUser("lehoangc@gmail.com", "User@123", Role.USER, "Lê Hoàng Cường");
+        seedUser("phamduyd@gmail.com", "User@123", Role.USER, "Phạm Duy Đạt");
+        seedUser("vuongthie@gmail.com", "User@123", Role.USER, "Vương Thị Yến");
+        seedUser("dangquangf@gmail.com", "User@123", Role.USER, "Đặng Quang Phúc");
+        seedUser("buitrangg@gmail.com", "User@123", Role.USER, "Bùi Trang Giang");
+        seedUser("ngominhh@gmail.com", "User@123", Role.USER, "Ngô Minh Hiếu");
+        seedUser("lythanhk@gmail.com", "User@123", Role.USER, "Lý Thanh Kiên");
+        seedUser("hotuanl@gmail.com", "User@123", Role.USER, "Hồ Tuấn Lộc");
         seedSkills();
+        seedTeachingSkills(); // Thêm dữ liệu test AI
         seedForumCategories();
         backfillForumPostStatuses();
         seedMissions();
@@ -56,13 +72,13 @@ public class DataInitializer implements CommandLineRunner {
     }
 
 
-    private void seedUser(String email, String rawPassword, Role role) {
+    private void seedUser(String email, String rawPassword, Role role, String fullName) {
         if (userRepository.findByEmail(email).isEmpty()) {
             User user = User.builder()
                     .email(email)
                     .password(passwordEncoder.encode(rawPassword))
                     .role(role)
-                    .fullName(deriveFullNameFromEmail(email))
+                    .fullName(fullName != null ? fullName : deriveFullNameFromEmail(email))
                     .isEmailVerified(true)
                     .build();
             userRepository.save(user);
@@ -70,6 +86,10 @@ public class DataInitializer implements CommandLineRunner {
         } else {
             log.info("⏩ {} user already exists: {}", role.name(), email);
         }
+    }
+
+    private void seedUser(String email, String rawPassword, Role role) {
+        seedUser(email, rawPassword, role, null);
     }
 
     private static String deriveFullNameFromEmail(String email) {
@@ -108,6 +128,57 @@ public class DataInitializer implements CommandLineRunner {
         } catch (Exception e) {
             log.error("Failed to seed skills from seeds/skills.json: {}", e.getMessage());
         }
+    }
+
+    // ─── Teaching Skills (AI Testing) ────────────────────────────────────────
+
+    private void seedTeachingSkills() {
+        if (userTeachingSkillRepository.count() > 0) {
+            log.info("⏩ Teaching skills already seeded");
+            return;
+        }
+
+        List<User> users = userRepository.findAll().stream()
+                .filter(u -> u.getRole() == Role.USER)
+                .toList();
+        List<Skill> allSkills = skillRepository.findAll();
+
+        if (allSkills.isEmpty() || users.isEmpty()) return;
+
+        Random random = new Random();
+        int seededCount = 0;
+
+        for (User user : users) {
+            // Shuffle skills để chọn ngẫu nhiên
+            List<Skill> shuffledSkills = new ArrayList<>(allSkills);
+            Collections.shuffle(shuffledSkills);
+
+            // Mỗi user dạy ngẫu nhiên 1 đến 3 kỹ năng
+            int skillsToTeach = 1 + random.nextInt(3);
+
+            for (int i = 0; i < skillsToTeach; i++) {
+                Skill skill = shuffledSkills.get(i);
+                
+                // Mức độ ngẫu nhiên
+                SkillLevel level = SkillLevel.values()[random.nextInt(SkillLevel.values().length)];
+                
+                UserTeachingSkill uts = UserTeachingSkill.builder()
+                        .user(user)
+                        .skill(skill)
+                        .level(level)
+                        .experienceDesc("Tôi có " + (random.nextInt(10) + 1) + " năm kinh nghiệm làm việc và giảng dạy " + skill.getName() + " trong môi trường thực tế. Từng hỗ trợ nhiều học viên đạt được mục tiêu.")
+                        .outcomeDesc("Nắm vững nền tảng " + skill.getName() + "\nTự tin áp dụng vào thực tế\nHoàn thành project cá nhân")
+                        .teachingStyle("Dạy theo hướng thực hành (hands-on), tập trung vào dự án thực tế.")
+                        .creditsPerHour(10 + random.nextInt(41)) // 10 - 50 credits
+                        .verificationStatus(VerificationStatus.APPROVED) // Đã duyệt để hiện lên AI/Explore
+                        .hidden(false)
+                        .build();
+
+                userTeachingSkillRepository.save(uts);
+                seededCount++;
+            }
+        }
+        log.info("✅ Seeded {} teaching skills for AI testing", seededCount);
     }
 
     // ─── Forum Categories ───────────────────────────────────────────────────

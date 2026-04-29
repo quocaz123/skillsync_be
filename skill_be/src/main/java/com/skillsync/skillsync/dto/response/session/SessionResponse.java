@@ -46,4 +46,8 @@ public class SessionResponse {
     // Review info
     private Integer rating;
     private String review;
+
+    // Financial & Dispute info
+    private Boolean isPaid;
+    private Boolean isReported;
 }
