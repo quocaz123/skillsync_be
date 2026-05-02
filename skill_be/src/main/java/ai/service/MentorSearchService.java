@@ -68,30 +68,91 @@ public class MentorSearchService {
      * Key = tên AI có thể trả về (lowercase), Value = tên chuẩn trong DB.
      */
     private static final Map<String, String> SKILL_ALIASES = Map.ofEntries(
-            Map.entry("reactjs",        "react"),
-            Map.entry("react.js",       "react"),
-            Map.entry("react js",       "react"),
-            Map.entry("nodejs",         "javascript"),
-            Map.entry("node.js",        "javascript"),
-            Map.entry("node js",        "javascript"),
-            Map.entry("vuejs",          "javascript"),
-            Map.entry("vue.js",         "javascript"),
-            Map.entry("angularjs",      "javascript"),
-            Map.entry("angular",        "javascript"),
-            Map.entry("nextjs",         "react"),
-            Map.entry("next.js",        "react"),
-            Map.entry("ml",             "machine learning"),
-            Map.entry("ai",             "machine learning"),
-            Map.entry("ux",             "ui/ux design"),
-            Map.entry("ux design",      "ui/ux design"),
-            Map.entry("ui design",      "ui/ux design"),
-            Map.entry("uiux",          "ui/ux design"),
-            Map.entry("html",           "javascript"),
-            Map.entry("css",            "javascript"),
-            Map.entry("web design",     "react"),
-            Map.entry("thiết kế web",   "react"),
-            Map.entry("ts",             "typescript")
+            // ── React ecosystem ───────────────────────────────────────────
+            Map.entry("reactjs",           "react"),
+            Map.entry("react.js",          "react"),
+            Map.entry("react js",          "react"),
+            Map.entry("nextjs",            "react"),
+            Map.entry("next.js",           "react"),
+            Map.entry("next js",           "react"),
+            // ── Vue ───────────────────────────────────────────────────────
+            Map.entry("vuejs",             "vue.js"),
+            Map.entry("vue js",            "vue.js"),
+            Map.entry("vue",               "vue.js"),
+            // ── Node.js ───────────────────────────────────────────────────
+            Map.entry("nodejs",            "node.js"),
+            Map.entry("node js",           "node.js"),
+            Map.entry("node",              "node.js"),
+            // ── Angular → JS (không có skill Angular riêng) ───────────────
+            Map.entry("angularjs",         "javascript"),
+            Map.entry("angular",           "javascript"),
+            Map.entry("html",              "javascript"),
+            Map.entry("css",               "javascript"),
+            Map.entry("web design",        "react"),
+            Map.entry("thiết kế web",      "react"),
+            // ── TypeScript ───────────────────────────────────────────────
+            Map.entry("ts",                "typescript"),
+            // ── Spring Boot ───────────────────────────────────────────────
+            Map.entry("spring",            "spring boot"),
+            Map.entry("spring mvc",        "spring boot"),
+            Map.entry("spring framework",  "spring boot"),
+            // ── Docker / DevOps ───────────────────────────────────────────
+            Map.entry("devops",            "docker"),
+            Map.entry("container",         "docker"),
+            Map.entry("kubernetes",        "docker"),
+            Map.entry("k8s",               "docker"),
+            // ── Flutter / Mobile ──────────────────────────────────────────
+            Map.entry("mobile",            "flutter"),
+            Map.entry("mobile app",        "flutter"),
+            Map.entry("react native",      "flutter"),
+            // ── Data & AI ─────────────────────────────────────────────────
+            Map.entry("ml",                "machine learning"),
+            Map.entry("ai",                "machine learning"),
+            Map.entry("deep learning",     "machine learning"),
+            Map.entry("data science",      "machine learning"),
+            Map.entry("data",              "data analysis"),
+            Map.entry("analytics",         "data analysis"),
+            // ── Design ────────────────────────────────────────────────────
+            Map.entry("ux",                "ui/ux design"),
+            Map.entry("ux design",         "ui/ux design"),
+            Map.entry("ui design",         "ui/ux design"),
+            Map.entry("uiux",              "ui/ux design"),
+            Map.entry("ui/ux",             "ui/ux design"),
+            Map.entry("ps",                "photoshop"),
+            Map.entry("adobe photoshop",   "photoshop"),
+            Map.entry("adobe illustrator", "illustrator"),
+            // ── Finance ───────────────────────────────────────────────────
+            Map.entry("chứng khoán",       "đầu tư chứng khoán"),
+            Map.entry("cổ phiếu",          "đầu tư chứng khoán"),
+            Map.entry("đầu tư",            "đầu tư chứng khoán"),
+            Map.entry("tài chính",         "tài chính cá nhân"),
+            // ── Languages ─────────────────────────────────────────────────
+            Map.entry("english",           "tiếng anh"),
+            Map.entry("ielts",             "tiếng anh"),
+            Map.entry("toeic",             "tiếng anh"),
+            Map.entry("japanese",          "tiếng nhật"),
+            Map.entry("jlpt",              "tiếng nhật"),
+            Map.entry("nhật",              "tiếng nhật"),
+            Map.entry("chinese",           "tiếng trung"),
+            Map.entry("hsk",               "tiếng trung"),
+            Map.entry("trung",             "tiếng trung"),
+            Map.entry("korean",            "tiếng hàn"),
+            Map.entry("topik",             "tiếng hàn"),
+            Map.entry("hàn",               "tiếng hàn"),
+            // ── Creative ─────────────────────────────────────────────────
+            Map.entry("đàn piano",         "piano"),
+            Map.entry("âm nhạc",           "piano"),
+            Map.entry("đàn guitar",        "guitar"),
+            Map.entry("guitar acoustic",   "guitar"),
+            Map.entry("vẽ",                "vẽ tranh"),
+            Map.entry("painting",          "vẽ tranh"),
+            Map.entry("photography",       "chụp ảnh"),
+            Map.entry("nhiếp ảnh",         "chụp ảnh"),
+            Map.entry("video editing",     "làm video"),
+            Map.entry("dựng phim",         "làm video"),
+            Map.entry("quay phim",         "làm video")
     );
+
 
     // ── Public API ────────────────────────────────────────────────────────
 

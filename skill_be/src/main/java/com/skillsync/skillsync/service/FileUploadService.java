@@ -3,6 +3,8 @@ package com.skillsync.skillsync.service;
 import com.skillsync.skillsync.dto.request.upload.PresignedUploadRequest;
 import com.skillsync.skillsync.dto.response.upload.PresignedUploadResponse;
 import com.skillsync.skillsync.enums.UploadType;
+import com.skillsync.skillsync.exception.AppException;
+import com.skillsync.skillsync.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -71,13 +73,13 @@ public class FileUploadService {
     }
 
     private void validateRequest(PresignedUploadRequest request) {
-        if (request == null) throw new IllegalArgumentException("Request không được null");
+        if (request == null) throw new AppException(ErrorCode.INVALID_REQUEST, "Request không được null");
         if (request.getFileName() == null || request.getFileName().isBlank())
-            throw new IllegalArgumentException("fileName không được để trống");
+            throw new AppException(ErrorCode.INVALID_REQUEST, "fileName không được để trống");
         if (request.getContentType() == null || request.getContentType().isBlank())
-            throw new IllegalArgumentException("contentType không được để trống");
+            throw new AppException(ErrorCode.INVALID_REQUEST, "contentType không được để trống");
         if (request.getUploadType() == null)
-            throw new IllegalArgumentException("uploadType không được để trống");
+            throw new AppException(ErrorCode.INVALID_REQUEST, "uploadType không được để trống");
 
         validateContentType(request.getUploadType(), request.getContentType());
     }
@@ -89,11 +91,11 @@ public class FileUploadService {
         switch (uploadType) {
             case AVATAR -> {
                 if (!imageTypes.contains(contentType))
-                    throw new IllegalArgumentException("Avatar chỉ hỗ trợ JPG, PNG, WEBP");
+                    throw new AppException(ErrorCode.INVALID_REQUEST, "Avatar chỉ hỗ trợ JPG, PNG, WEBP");
             }
             case TEACHING_EVIDENCE, SESSION_ATTACHMENT, REPORT_EVIDENCE -> {
                 if (!mixedTypes.contains(contentType))
-                    throw new IllegalArgumentException("Loại file không được hỗ trợ");
+                    throw new AppException(ErrorCode.INVALID_REQUEST, "Loại file không được hỗ trợ");
             }
         }
     }

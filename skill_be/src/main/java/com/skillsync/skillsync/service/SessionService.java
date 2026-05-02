@@ -19,6 +19,7 @@ import com.skillsync.skillsync.repository.SessionRepository;
 import com.skillsync.skillsync.repository.TeachingSlotRepository;
 import com.skillsync.skillsync.repository.UserRepository;
 import com.skillsync.skillsync.repository.UserTeachingSkillRepository;
+import com.skillsync.skillsync.repository.SessionReportRepository;
 import com.skillsync.skillsync.dto.request.notification.NotificationCreateRequest;
 import com.skillsync.skillsync.enums.NotificationType;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +48,7 @@ public class SessionService {
     private final SystemLogService systemLogService;
     private final UserTeachingSkillRepository userTeachingSkillRepository;
     private final NotificationEventPublisher notificationEventPublisher;
+    private final SessionReportRepository sessionReportRepository;
 
     // ── Book (Request) ──────────────────────────────────────
     @Transactional
@@ -197,7 +199,7 @@ public class SessionService {
                 .slotTime(slotStart)
                 .slotEndTime(slotEnd)
                 .creditCost(cost)
-                .status(SlotStatus.BOOKED) // Tự sinh nên ẩn khỏi danh sách OPEN
+                .status(SlotStatus.PENDING) // Đổi sang PENDING thay vì BOOKED ngay lập tức
                 .build();
         generatedSlot = slotRepository.save(generatedSlot);
 
@@ -371,6 +373,13 @@ public class SessionService {
 
         session.setStatus(SessionStatus.CANCELLED);
         sessionRepository.save(session);
+
+        // Nếu slot này là PENDING (do đề xuất), chuyển sang CANCELLED
+        TeachingSlot slot = session.getSlot();
+        if (slot != null && slot.getStatus() == SlotStatus.PENDING) {
+            slot.setStatus(SlotStatus.CANCELLED);
+            slotRepository.save(slot);
+        }
 
         // Thông báo Learner bị từ chối
         notificationService.createAndSend(NotificationCreateRequest.builder()
@@ -700,12 +709,15 @@ public class SessionService {
                 .teachingSkillId(s.getTeachingSkill() != null ? s.getTeachingSkill().getId() : null)
                 .skillName(s.getTeachingSkill() != null ? s.getTeachingSkill().getSkill().getName() : null)
                 .skillIcon(s.getTeachingSkill() != null ? s.getTeachingSkill().getSkill().getIcon() : null)
+                .skillLevel(s.getTeachingSkill() != null ? s.getTeachingSkill().getLevel().toString() : null)
                 .learnerNotes(s.getLearnerNotes())
                 .startedAt(s.getStartedAt())
                 .endedAt(s.getEndedAt())
                 .createdAt(s.getCreatedAt())
                 .rating(rating)
                 .review(reviewText)
+                .isPaid(transactionRepository.existsByReferenceIdAndTransactionType(s.getId(), TransactionType.EARN_SESSION))
+                .isReported(sessionReportRepository.existsBySessionId(s.getId()))
                 .build();
     }
 
@@ -717,5 +729,42 @@ public class SessionService {
         } catch (IllegalArgumentException e) {
             return null;
         }
+    }
+
+    // ── Cancel (Learner hủy trước khi Approve) ─────────────
+    @Transactional
+    public void cancelSession(UUID sessionId) {
+        User learner = userService.getCurrentUser();
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND));
+
+        // Chỉ learner của session mới được hủy
+        if (!session.getLearner().getId().equals(learner.getId())) {
+            throw new AppException(ErrorCode.FORBIDDEN);
+        }
+        // Chỉ hủy được khi còn PENDING_APPROVAL
+        if (session.getStatus() != SessionStatus.PENDING_APPROVAL) {
+            throw new AppException(ErrorCode.SESSION_ALREADY_DECIDED);
+        }
+
+        session.setStatus(SessionStatus.CANCELLED);
+        sessionRepository.save(session);
+
+        // Nếu slot là PENDING (do propose), giải phóng lại
+        TeachingSlot slot = session.getSlot();
+        if (slot != null && slot.getStatus() == SlotStatus.PENDING) {
+            slot.setStatus(SlotStatus.AVAILABLE);
+            slotRepository.save(slot);
+        }
+
+        // Thông báo cho Mentor
+        notificationService.createAndSend(NotificationCreateRequest.builder()
+                .userId(session.getTeacher().getId())
+                .type(NotificationType.SESSION_CANCELLED)
+                .title("Học viên đã hủy yêu cầu")
+                .content(learner.getFullName() + " đã hủy yêu cầu đặt lịch trước khi bạn phê duyệt.")
+                .entityId(session.getId())
+                .redirectUrl("/app/teaching")
+                .build());
     }
 }

@@ -18,6 +18,8 @@ import com.skillsync.skillsync.entity.TeachingSkillEvidence;
 import com.skillsync.skillsync.entity.Review;
 import com.skillsync.skillsync.dto.response.skill.EvidenceResponse;
 import com.skillsync.skillsync.dto.response.review.ReviewResponse;
+import com.skillsync.skillsync.exception.AppException;
+import com.skillsync.skillsync.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -175,25 +177,32 @@ public class UserTeachingSkillService {
                             .stream().map(this::evidenceToResponse).toList();
                     List<ReviewResponse> revs = reviewsMap.getOrDefault(ts.getId(), List.of())
                             .stream().map(this::reviewToResponse).toList();
-                    return toResponseFully(ts, stat != null ? stat.getOpenSlots() : 0L, stat != null ? stat.getTotalSessions() : 0L, evs, revs);
+                    
+                    double avg = revs.stream().mapToInt(ReviewResponse::getRating).average().orElse(0.0);
+                    int total = revs.size();
+                    
+                    return toResponseFully(ts, stat != null ? stat.getOpenSlots() : 0L, stat != null ? stat.getTotalSessions() : 0L, evs, revs, total, avg);
                 })
                 .toList();
     }
 
     public TeachingSkillResponse create(CreateTeachingSkillRequest request) {
-        if (request.getSkillId() == null) throw new IllegalArgumentException("skillId không được để trống");
-        if (request.getLevel() == null) throw new IllegalArgumentException("level không được để trống");
-        if (request.getExperienceDesc() == null || request.getExperienceDesc().isBlank())
-            throw new IllegalArgumentException("experienceDesc không được để trống");
-        if (request.getOutcomeDesc() == null || request.getOutcomeDesc().isBlank())
-            throw new IllegalArgumentException("outcomeDesc không được để trống");
-
+        if (request.getSkillId() == null) throw new AppException(ErrorCode.INVALID_REQUEST, "skillId không được để trống");
+        if (request.getLevel() == null) throw new AppException(ErrorCode.INVALID_REQUEST, "level không được để trống");
+        if (request.getExperienceDesc() == null || request.getExperienceDesc().trim().isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "experienceDesc không được để trống");
+        }
+        if (request.getOutcomeDesc() == null || request.getOutcomeDesc().trim().isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "outcomeDesc không được để trống");
+        }
         User user = userService.getCurrentUser();
         Skill skill = skillRepository.findById(request.getSkillId())
-                .orElseThrow(() -> new RuntimeException("Skill không tồn tại"));
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Skill không tồn tại"));
 
-        if (teachingSkillRepository.existsByUserIdAndSkillIdAndLevel(user.getId(), skill.getId(), request.getLevel()))
-            throw new IllegalStateException("Bạn đã đăng ký dạy " + skill.getName() + " ở level này rồi");
+        if (teachingSkillRepository.existsByUserIdAndSkillIdAndLevel(user.getId(), skill.getId(), request.getLevel())) {
+            throw new AppException(ErrorCode.TEACHING_SKILL_DUPLICATE,
+                    "Bạn đã đăng ký dạy " + skill.getName() + " ở level này rồi");
+        }
 
         UserTeachingSkill saved = teachingSkillRepository.save(UserTeachingSkill.builder()
                 .user(user)
@@ -215,7 +224,7 @@ public class UserTeachingSkillService {
 
         User user = userService.getCurrentUser();
         if (!ts.getUser().getId().equals(user.getId()))
-            throw new RuntimeException("Bạn không có quyền xóa teaching skill này");
+            throw new AppException(ErrorCode.FORBIDDEN, "Bạn không có quyền xóa teaching skill này");
 
         // Xóa file evidence trên R2
         evidenceRepository.findByTeachingSkillId(id).forEach(ev -> {
@@ -235,7 +244,7 @@ public class UserTeachingSkillService {
 
         User user = userService.getCurrentUser();
         if (!ts.getUser().getId().equals(user.getId()))
-            throw new RuntimeException("Bạn không có quyền sửa giá teaching skill này");
+            throw new AppException(ErrorCode.FORBIDDEN, "Bạn không có quyền sửa giá teaching skill này");
 
         ts.setCreditsPerHour(newPrice);
         teachingSkillRepository.save(ts);
@@ -250,10 +259,12 @@ public class UserTeachingSkillService {
 
         User user = userService.getCurrentUser();
         if (!ts.getUser().getId().equals(user.getId()))
-            throw new RuntimeException("Bạn không có quyền thay đổi kỹ năng này");
+            throw new AppException(ErrorCode.FORBIDDEN, "Bạn không có quyền thay đổi kỹ năng này");
 
-        if (ts.getVerificationStatus() != com.skillsync.skillsync.enums.VerificationStatus.APPROVED)
-            throw new IllegalStateException("Chỉ kỹ năng đã duyệt mới có thể tạm ẩn/hiện");
+        if (ts.getVerificationStatus() != com.skillsync.skillsync.enums.VerificationStatus.APPROVED) {
+            throw new AppException(ErrorCode.INVALID_REQUEST,
+                    "Chỉ kỹ năng đã duyệt mới có thể tạm ẩn/hiện");
+        }
 
         ts.setHidden(!ts.isHidden());
         teachingSkillRepository.save(ts);
@@ -289,10 +300,10 @@ public class UserTeachingSkillService {
     private TeachingSkillResponse toResponse(UserTeachingSkill ts) {
         List<EvidenceResponse> evs = evidenceRepository.findByTeachingSkillId(ts.getId())
                 .stream().map(this::evidenceToResponse).toList();
-        return toResponseFully(ts, 0L, 0L, evs, java.util.List.of());
+        return toResponseFully(ts, 0L, 0L, evs, java.util.List.of(), 0, 0.0);
     }
 
-    private TeachingSkillResponse toResponseFully(UserTeachingSkill ts, Long openSlots, Long totalSessions, List<EvidenceResponse> evidences, List<ReviewResponse> reviews) {
+    private TeachingSkillResponse toResponseFully(UserTeachingSkill ts, Long openSlots, Long totalSessions, List<EvidenceResponse> evidences, List<ReviewResponse> reviews, Integer totalReviews, Double averageRating) {
         return TeachingSkillResponse.builder()
                 .id(ts.getId())
                 .skillId(ts.getSkill().getId())
@@ -309,6 +320,8 @@ public class UserTeachingSkillService {
                 .hidden(ts.isHidden())
                 .openSlotsCount(openSlots)
                 .totalSessions(totalSessions)
+                .totalReviews(totalReviews)
+                .averageRating(averageRating)
                 .teacherId(ts.getUser().getId())
                 .teacherName(ts.getUser().getFullName())
                 .teacherAvatar(ts.getUser().getAvatarUrl())

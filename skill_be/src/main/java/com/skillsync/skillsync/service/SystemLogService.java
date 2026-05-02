@@ -39,14 +39,11 @@ public class SystemLogService {
                     .ipAddress(ipAddress)
                     .build();
 
-            // Fire and forget so we don't block main transaction
-            CompletableFuture.runAsync(() -> {
-                try {
-                    systemLogRepository.save(systemLog);
-                } catch (Exception e) {
-                    log.error("Failed to save system log: ", e);
-                }
-            });
+            try {
+                systemLogRepository.save(systemLog);
+            } catch (Exception e) {
+                log.error("Failed to save system log: ", e);
+            }
 
         } catch (Exception e) {
             log.error("Error creating system log: ", e);

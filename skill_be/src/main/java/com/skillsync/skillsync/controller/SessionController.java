@@ -108,4 +108,15 @@ public class SessionController {
         sessionService.confirmSession(id);
         return ApiResponse.success(null);
     }
+
+    /**
+     * PATCH /api/sessions/{id}/cancel
+     * Learner hủy session khi còn ở trạng thái PENDING_APPROVAL.
+     * Credits chưa bị trừ nên chỉ cần chuyển status sang CANCELLED.
+     */
+    @PatchMapping("/{id}/cancel")
+    public ApiResponse<Void> cancel(@PathVariable UUID id) {
+        sessionService.cancelSession(id);
+        return ApiResponse.success(null);
+    }
 }

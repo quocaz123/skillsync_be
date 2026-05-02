@@ -4,6 +4,8 @@ import com.skillsync.skillsync.dto.response.mission.UserMissionResponse;
 import com.skillsync.skillsync.entity.CreditMission;
 import com.skillsync.skillsync.entity.CreditTransaction;
 import com.skillsync.skillsync.entity.User;
+import com.skillsync.skillsync.exception.AppException;
+import com.skillsync.skillsync.exception.ErrorCode;
 import com.skillsync.skillsync.entity.UserMission;
 import com.skillsync.skillsync.enums.MissionType;
 import com.skillsync.skillsync.enums.TransactionType;
@@ -32,7 +34,7 @@ public class UserMissionService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        List<CreditMission> allMissions = creditMissionRepository.findAll();
+        List<CreditMission> allMissions = creditMissionRepository.findByStatus(com.skillsync.skillsync.enums.MissionStatus.ACTIVE);
         List<UserMission> userMissions = userMissionRepository.findAllByUserId(user.getId());
 
         return allMissions.stream().map(mission -> {
@@ -99,10 +101,10 @@ public class UserMissionService {
 
         if (um.getIsCompleted()) {
             if (mission.getMissionType() == MissionType.ONCE) {
-                throw new IllegalArgumentException("Mission already completed");
+                throw new AppException(ErrorCode.MISSION_ALREADY_COMPLETED, "Mission already completed");
             } else if (mission.getMissionType() == MissionType.DAILY) {
                 if (um.getRewardClaimedAt() != null && um.getRewardClaimedAt().toLocalDate().equals(LocalDate.now())) {
-                    throw new IllegalArgumentException("Daily mission already completed today");
+                    throw new AppException(ErrorCode.MISSION_ALREADY_COMPLETED, "Daily mission already completed today");
                 }
             }
         }
@@ -115,7 +117,7 @@ public class UserMissionService {
             // The FE must call trackAction first or we can bypass for ONLINE_30_MINS as FE
             // doesn't do multiple POSTs easily for time.
             if (!mission.getTargetAction().equals("ONLINE_30_MINS")) {
-                throw new IllegalArgumentException("Chưa hoàn thành yêu cầu của nhiệm vụ.");
+                throw new AppException(ErrorCode.MISSION_REQUIREMENTS_NOT_MET, "Chưa hoàn thành yêu cầu của nhiệm vụ.");
             }
         }
 
@@ -150,7 +152,7 @@ public class UserMissionService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        List<CreditMission> missions = creditMissionRepository.findByTargetAction(action);
+        List<CreditMission> missions = creditMissionRepository.findByTargetActionAndStatus(action, com.skillsync.skillsync.enums.MissionStatus.ACTIVE);
         for (CreditMission m : missions) {
             UserMission um = userMissionRepository.findByUserIdAndMissionId(user.getId(), m.getId())
                     .orElseGet(

@@ -3,5 +3,7 @@ package com.skillsync.skillsync.enums;
 public enum SlotStatus {
     OPEN,
     BOOKED,
-    CANCELLED
+    PENDING,
+    CANCELLED,
+    AVAILABLE
 }

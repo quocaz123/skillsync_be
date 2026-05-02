@@ -36,6 +36,7 @@ public class SessionResponse {
     private UUID teachingSkillId;
     private String skillName;
     private String skillIcon;
+    private String skillLevel;
 
     private String learnerNotes;
     private LocalDateTime startedAt;
@@ -45,4 +46,8 @@ public class SessionResponse {
     // Review info
     private Integer rating;
     private String review;
+
+    // Financial & Dispute info
+    private Boolean isPaid;
+    private Boolean isReported;
 }

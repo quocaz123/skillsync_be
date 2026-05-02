@@ -13,6 +13,8 @@ import com.skillsync.skillsync.entity.User;
 import com.skillsync.skillsync.enums.ForumPostStatus;
 import com.skillsync.skillsync.enums.PostType;
 import com.skillsync.skillsync.enums.VoteType;
+import com.skillsync.skillsync.exception.AppException;
+import com.skillsync.skillsync.exception.ErrorCode;
 import com.skillsync.skillsync.repository.ForumCategoryRepository;
 import com.skillsync.skillsync.repository.ForumPostRepository;
 import com.skillsync.skillsync.repository.PostSaveRepository;
@@ -59,13 +61,13 @@ public class ForumPostService {
     public AdminForumPostResponse verifyPost(UUID postId, VerifyForumPostRequest request) {
         User admin = userService.getCurrentUser();
         ForumPost post = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("Post not found with id: " + postId));
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Post not found with id: " + postId));
 
         if (!"APPROVED".equalsIgnoreCase(request.getAction()) && !"REJECTED".equalsIgnoreCase(request.getAction())) {
-            throw new IllegalArgumentException("action must be APPROVED or REJECTED");
+            throw new AppException(ErrorCode.INVALID_REQUEST, "action must be APPROVED or REJECTED");
         }
         if ("REJECTED".equalsIgnoreCase(request.getAction()) && (request.getRejectionReason() == null || request.getRejectionReason().isBlank())) {
-            throw new IllegalArgumentException("rejectionReason is required when rejecting a post");
+            throw new AppException(ErrorCode.INVALID_REQUEST, "rejectionReason is required when rejecting a post");
         }
 
         post.setStatus("APPROVED".equalsIgnoreCase(request.getAction())
@@ -104,11 +106,11 @@ public class ForumPostService {
     @Transactional(readOnly = true)
     public ForumPostDetailResponse getPostById(UUID postId) {
         ForumPost post = postRepository.findWithDetailsById(postId)
-                .orElseThrow(() -> new RuntimeException("Post not found with id: " + postId));
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Post not found with id: " + postId));
 
         User currentUser = getCurrentUserOrNull();
         if (!canViewPost(post, currentUser)) {
-            throw new RuntimeException("Post not found with id: " + postId);
+            throw new AppException(ErrorCode.NOT_FOUND, "Post not found with id: " + postId);
         }
 
         return toDetailResponse(post, currentUser);
@@ -122,7 +124,7 @@ public class ForumPostService {
         User author = userService.getCurrentUser();
 
         ForumCategory category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new RuntimeException("Category not found with id: " + request.getCategoryId()));
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Category not found with id: " + request.getCategoryId()));
 
         String tagsString = request.getTags() != null ? String.join(",", request.getTags()) : null;
 
@@ -152,10 +154,10 @@ public class ForumPostService {
     public ForumPostResponse updatePost(UUID postId, UpdateForumPostRequest request) {
         User currentUser = userService.getCurrentUser();
         ForumPost post = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("Post not found with id: " + postId));
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Post not found with id: " + postId));
 
         if (!post.getAuthor().getId().equals(currentUser.getId())) {
-            throw new RuntimeException("Unauthorized: only author can update this post");
+            throw new AppException(ErrorCode.FORBIDDEN, "Unauthorized: only author can update this post");
         }
 
         if (request.getTitle() != null) {
@@ -163,7 +165,7 @@ public class ForumPostService {
         }
         if (request.getCategoryId() != null) {
             ForumCategory category = categoryRepository.findById(request.getCategoryId())
-                    .orElseThrow(() -> new RuntimeException("Category not found with id: " + request.getCategoryId()));
+                    .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Category not found with id: " + request.getCategoryId()));
             post.setCategory(category);
         }
         if (request.getContent() != null) {
@@ -198,10 +200,10 @@ public class ForumPostService {
     public void deletePost(UUID postId) {
         User currentUser = userService.getCurrentUser();
         ForumPost post = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("Post not found with id: " + postId));
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Post not found with id: " + postId));
 
         if (!post.getAuthor().getId().equals(currentUser.getId())) {
-            throw new RuntimeException("Unauthorized: only author can delete this post");
+            throw new AppException(ErrorCode.FORBIDDEN, "Unauthorized: only author can delete this post");
         }
 
         forumRealtimeEventService.publishForumPostChangedEvent(buildForumPostChangedEvent(post, "DELETE"));
