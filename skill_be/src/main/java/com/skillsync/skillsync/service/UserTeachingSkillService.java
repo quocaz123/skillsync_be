@@ -29,9 +29,11 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -83,49 +85,44 @@ public class UserTeachingSkillService {
         Specification<UserTeachingSkill> spec = UserTeachingSkillExploreSpec.approvedPublic(q, skillId, category);
 
         if ("experience".equalsIgnoreCase(sort)) {
-            List<UserTeachingSkill> all = teachingSkillRepository.findAll(spec);
-            if (all.isEmpty()) {
+            boolean filterSkill = skillId != null;
+            boolean filterCategory = category != null;
+            boolean filterQ = q != null && !q.isBlank();
+            String qPlain = filterQ ? q.trim().toLowerCase(Locale.ROOT) : "";
+            String categoryStr = filterCategory ? category.name() : "";
+
+            Pageable pageable = PageRequest.of(safePage, safeSize);
+            var idPage = teachingSkillRepository.findExploreIdsOrderByExperience(
+                    filterSkill, filterSkill ? skillId : UUID.randomUUID(),
+                    filterCategory, categoryStr,
+                    filterQ, qPlain,
+                    pageable);
+
+            if (idPage.isEmpty()) {
                 return PageResponse.<TeachingSkillResponse>builder()
                         .currentPage(safePage)
-                        .totalPages(0)
+                        .totalPages(idPage.getTotalPages())
                         .pageSize(safeSize)
-                        .totalElements(0)
+                        .totalElements(idPage.getTotalElements())
                         .data(List.of())
                         .build();
             }
 
-            List<UUID> allIds = all.stream().map(UserTeachingSkill::getId).toList();
-            Map<UUID, TeachingSlotRepository.TeachingSkillStats> statsMap = teachingSlotRepository
-                    .getStatsBySkillIds(allIds).stream()
-                    .collect(Collectors.toMap(TeachingSlotRepository.TeachingSkillStats::getTeachingSkillId, s -> s, (a, b) -> a));
-
-            List<UserTeachingSkill> sorted = all.stream()
-                    .sorted(Comparator.comparingLong((UserTeachingSkill uts) -> {
-                        TeachingSlotRepository.TeachingSkillStats st = statsMap.get(uts.getId());
-                        return st != null && st.getTotalSessions() != null ? st.getTotalSessions() : 0L;
-                    }).reversed().thenComparing(uts -> uts.getCreatedAt(), Comparator.nullsLast(Comparator.reverseOrder())))
+            List<UUID> order = idPage.getContent();
+            List<UserTeachingSkill> batch = teachingSkillRepository.findAllById(order);
+            Map<UUID, UserTeachingSkill> byId = batch.stream()
+                    .collect(Collectors.toMap(UserTeachingSkill::getId, v -> v, (a, b) -> a, LinkedHashMap::new));
+            List<UserTeachingSkill> ordered = order.stream()
+                    .map(byId::get)
+                    .filter(Objects::nonNull)
                     .toList();
 
-            long total = sorted.size();
-            int totalPages = (int) Math.ceil(total / (double) safeSize);
-            int from = safePage * safeSize;
-            if (from >= total) {
-                return PageResponse.<TeachingSkillResponse>builder()
-                        .currentPage(safePage)
-                        .totalPages(totalPages)
-                        .pageSize(safeSize)
-                        .totalElements(total)
-                        .data(List.of())
-                        .build();
-            }
-            int to = Math.min(from + safeSize, (int) total);
-            List<UserTeachingSkill> slice = sorted.subList(from, to);
             return PageResponse.<TeachingSkillResponse>builder()
-                    .currentPage(safePage)
-                    .totalPages(totalPages)
-                    .pageSize(safeSize)
-                    .totalElements(total)
-                    .data(enrichTeachingSkills(slice))
+                    .currentPage(idPage.getNumber())
+                    .totalPages(idPage.getTotalPages())
+                    .pageSize(idPage.getSize())
+                    .totalElements(idPage.getTotalElements())
+                    .data(enrichTeachingSkills(ordered))
                     .build();
         }
 
