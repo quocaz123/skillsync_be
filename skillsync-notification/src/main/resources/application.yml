@@ -4,10 +4,30 @@ server:
     context-path: /notification
 
 spring:
-  # Mặc định chạy local — tránh kết nối Aiven + SASL_SSL khi IDE vẫn có biến KAFKA_*.
-  # Cloud: --spring.profiles.active=pro hoặc SPRING_PROFILES_ACTIVE=pro
+  # Mặc định chạy local. Production bật bằng:
+  # --spring.profiles.active=pro hoặc SPRING_PROFILES_ACTIVE=pro
   profiles:
     default: local
+
+  # Fallback Kafka config (tránh lỗi placeholder nếu profile file không load vì lý do nào đó)
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    listener:
+      auto-startup: ${KAFKA_LISTENER_AUTO_STARTUP:true}
+    consumer:
+      group-id: skillsync-notification-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.skillsync.notification.dto.event"
+        spring.json.use.type.headers: false
+        max.poll.interval.ms: 900000
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: false
 
   mail:
     host: smtp.gmail.com

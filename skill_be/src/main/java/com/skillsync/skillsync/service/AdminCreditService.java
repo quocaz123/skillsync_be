@@ -20,6 +20,7 @@ public class AdminCreditService {
 
     private final CreditTransactionRepository transactionRepository;
     private final UserRepository userRepository;
+    private final NotificationEventPublisher notificationEventPublisher;
 
     public List<AdminTransactionDTO> getAllTransactions() {
         return transactionRepository.findAllByOrderByCreatedAtDesc()
@@ -46,6 +47,18 @@ public class AdminCreditService {
         userRepository.save(user);
         
         CreditTransaction savedTx = transactionRepository.save(transaction);
+
+        // Email (Kafka) — coi như nạp credits thủ công từ admin
+        // amount/balance để dạng string theo CreditEvent DTO bên notification service
+        if (user.getEmail() != null && !user.getEmail().isBlank()) {
+            notificationEventPublisher.publishCreditEvent(
+                    "DEPOSIT_SUCCESS",
+                    user.getEmail(),
+                    user.getFullName() != null ? user.getFullName() : "bạn",
+                    String.valueOf(request.getAmount()),
+                    String.valueOf(user.getCreditsBalance())
+            );
+        }
         return mapToDTO(savedTx);
     }
 

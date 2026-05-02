@@ -32,7 +32,12 @@ public class Session {
     @JoinColumn(name = "teacher_id")
     User teacher;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    /**
+     * Một slot có thể có nhiều session PENDING (nhiều learner cùng request),
+     * mentor sẽ approve 1 và cancel các request còn lại.
+     * Vì vậy quan hệ đúng là ManyToOne, KHÔNG phải OneToOne.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "slot_id")
     TeachingSlot slot;
 
@@ -82,4 +87,11 @@ public class Session {
     @UpdateTimestamp
     @Column(name = "updated_at")
     LocalDateTime updatedAt;
+
+    /**
+     * Thời điểm đã gửi email nhắc lịch (tránh gửi trùng khi scheduler chạy lặp).
+     * Null = chưa gửi.
+     */
+    @Column(name = "reminder_sent_at")
+    LocalDateTime reminderSentAt;
 }

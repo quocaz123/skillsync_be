@@ -19,27 +19,42 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-
-      # chỉ dùng 1 listener cho đơn giản
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      # 2 listeners:
+      # - INTERNAL: các container trong compose gọi bằng kafka:29092
+      # - EXTERNAL: máy host (Windows) gọi bằng localhost:9092 (nếu cần debug)
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
 
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
 
-  redis:
-    image: redis:7-alpine
-    container_name: redis
+  skill_be:
+    build:
+      context: ./skill_be
+    container_name: skill_be
+    env_file:
+      - ./skill_be/.env
+    environment:
+      # trong Docker: Kafka phải dùng listener INTERNAL
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      - kafka
     ports:
-      - "6379:6379"
-    command: ["redis-server", "--appendonly", "yes"]
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+      - "8080:8080"
     restart: unless-stopped
 
-volumes:
-  redis_data:
+  skillsync-notification:
+    build:
+      context: ./skillsync-notification
+    container_name: skillsync-notification
+    env_file:
+      - ./skillsync-notification/.env
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      - kafka
+    ports:
+      - "8081:8081"
+    restart: unless-stopped

@@ -115,6 +115,27 @@ public class NotificationEventPublisher {
         sendSafely(sessionTopic, recipientEmail, event, eventType);
     }
 
+    /**
+     * Publish email reminder trước giờ học (legacy schema đang được skillsync-notification dùng).
+     * eventType = BOOKING_REMINDER.
+     */
+    public void publishBookingReminder(String recipientEmail,
+                                       String recipientName,
+                                       String counterpartName,
+                                       String sessionTime,
+                                       String sessionLink) {
+        Map<String, Object> event = new HashMap<>();
+        event.put("eventType", "BOOKING_REMINDER");
+        event.put("recipientEmail", recipientEmail);
+        event.put("recipientName", recipientName);
+        event.put("counterpartName", counterpartName);
+        event.put("sessionTime", sessionTime);
+        event.put("sessionLink", sessionLink);
+        event.put("timestamp", LocalDateTime.now().toString());
+
+        sendSafely(sessionTopic, recipientEmail, event, "BOOKING_REMINDER");
+    }
+
     // ── SKILL Events ──────────────────────────────────────────────────────────
 
     /**
@@ -132,6 +153,26 @@ public class NotificationEventPublisher {
         event.put("timestamp", LocalDateTime.now().toString());
 
         sendSafely(skillTopic, recipientEmail, event, eventType);
+    }
+
+    // ── CREDIT Events ─────────────────────────────────────────────────────────
+
+    /**
+     * Publish CREDIT event khi có thay đổi số dư (nạp credits).
+     * Notification service sẽ gửi email theo eventType (DEPOSIT_SUCCESS / WITHDRAWAL_SUCCESS).
+     */
+    public void publishCreditEvent(String eventType,
+                                   String recipientEmail, String recipientName,
+                                   String amount, String balance) {
+        Map<String, Object> event = new HashMap<>();
+        event.put("eventType", eventType);
+        event.put("recipientEmail", recipientEmail);
+        event.put("recipientName", recipientName);
+        event.put("amount", amount);
+        event.put("balance", balance);
+        event.put("timestamp", LocalDateTime.now().toString());
+
+        sendSafely(creditTopic, recipientEmail, event, eventType);
     }
 
     // ── Internal ─────────────────────────────────────────────────────────────

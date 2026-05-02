@@ -32,6 +32,9 @@ public class CookieService {
         cookie.setMaxAge(maxAge);
         cookie.setSecure(cookieProperties.isSecure());
         cookie.setAttribute("SameSite", cookieProperties.getSameSite());
+        if (cookieProperties.getDomain() != null && !cookieProperties.getDomain().isBlank()) {
+            cookie.setDomain(cookieProperties.getDomain().trim());
+        }
         return cookie;
     }
 }

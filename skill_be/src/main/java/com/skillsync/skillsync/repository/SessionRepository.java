@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -44,4 +45,21 @@ public interface SessionRepository extends JpaRepository<Session, UUID> {
     Integer getTeacherPendingCredits(@Param("userId") UUID userId);
 
     List<Session> findByLearnerIdAndStatusNotOrderByCreatedAtDesc(UUID learnerId, SessionStatus status);
+
+    /**
+     * Lấy các session SCHEDULED theo ngày slot (để scheduler tính reminder).
+     * Chỉ lấy session chưa gửi reminder và chưa start.
+     */
+    @Query("""
+            SELECT s
+            FROM Session s
+            JOIN FETCH s.slot sl
+            JOIN FETCH s.learner l
+            JOIN FETCH s.teacher t
+            WHERE s.status = com.skillsync.skillsync.enums.SessionStatus.SCHEDULED
+              AND s.startedAt IS NULL
+              AND s.reminderSentAt IS NULL
+              AND sl.slotDate IN :dates
+            """)
+    List<Session> findScheduledSessionsForReminder(@Param("dates") List<LocalDate> dates);
 }

@@ -32,4 +32,7 @@ public interface TeachingSlotRepository extends JpaRepository<TeachingSlot, UUID
     boolean existsByTeachingSkillIdAndSlotDateAndSlotTime(UUID teachingSkillId, java.time.LocalDate date, java.time.LocalTime time);
 
     List<TeachingSlot> findByTeachingSkillIdAndSlotDateInAndStatusNot(UUID teachingSkillId, List<LocalDate> slotDates, SlotStatus status);
+
+    /** Lấy các slot theo status và ngày <= hôm nay (để auto-expire slot quá hạn). */
+    List<TeachingSlot> findByStatusAndSlotDateLessThanEqual(SlotStatus status, LocalDate date);
 }
