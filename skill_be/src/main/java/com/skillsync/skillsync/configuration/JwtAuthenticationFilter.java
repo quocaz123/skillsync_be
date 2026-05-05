@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.skillsync.skillsync.constant.CookieNames;
 import com.skillsync.skillsync.enums.UserStatus;
 import com.skillsync.skillsync.repository.UserRepository;
+import com.skillsync.skillsync.service.CookieService;
 import com.skillsync.skillsync.service.JwtService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -33,6 +34,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
+    private final CookieService cookieService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -88,28 +90,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         response.setCharacterEncoding("UTF-8");
 
         // Xóa cookie để tránh trình duyệt tiếp tục gửi token của user bị ban
-        clearAuthCookies(response);
+        cookieService.clearAuthCookies(response);
 
         Map<String, Object> body = Map.of(
                 "code", 403,
                 "message", "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.",
                 "success", false);
         objectMapper.writeValue(response.getWriter(), body);
-    }
-
-    private void clearAuthCookies(HttpServletResponse response) {
-        Cookie accessCookie = new Cookie(CookieNames.ACCESS_TOKEN, null);
-        accessCookie.setPath("/");
-        accessCookie.setHttpOnly(true);
-        accessCookie.setMaxAge(0);
-
-        Cookie refreshCookie = new Cookie(CookieNames.REFRESH_TOKEN, null);
-        refreshCookie.setPath("/skillsync/auth/refresh");
-        refreshCookie.setHttpOnly(true);
-        refreshCookie.setMaxAge(0);
-
-        response.addCookie(accessCookie);
-        response.addCookie(refreshCookie);
     }
 
     private static String readCookie(HttpServletRequest request, String name) {

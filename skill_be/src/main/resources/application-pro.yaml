@@ -37,8 +37,8 @@ spring:
         enabled: true
       timeout: 3000ms
 
-  # ── Aiven Kafka (SASL_SSL + SCRAM-SHA-256) ─────────────
-  # Bootstrap: <service>.aivencloud.com:<port> (lấy từ Aiven Console)
+  # ── Kafka PLAINTEXT (không dùng Aiven/SASL_SSL) ─────────
+  # Đặt KAFKA_BOOTSTRAP_SERVERS trỏ đến broker bạn tự quản.
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
     producer:
@@ -46,19 +46,32 @@ spring:
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       properties:
         spring.json.add.type.headers: false
-    properties:
-      # Truyền vào KafkaProducerConfig để build JAAS config
-      sasl-username: ${KAFKA_SASL_USERNAME}   # thường là "avnadmin"
-      sasl-password: ${KAFKA_SASL_PASSWORD}   # Service Password trong Aiven Console
+        # Fail-fast để Kafka lỗi không làm treo request lâu
+        delivery.timeout.ms: 10000
+        request.timeout.ms: 3000
+        max.block.ms: 2000
+        retries: 0
+    # Không dùng SASL/SSL
 
 jwt:
   secret: ${JWT_SECRET}
 
 app:
   timezone: ${APP_TIMEZONE:Asia/Ho_Chi_Minh}
+  frontend-url: ${FRONTEND_URL:https://skillsync.vercel.app}
+  # FE chạy Cloudflare Pages/Vercel và API ở domain khác → cookie cross-site cần SameSite=None
   cookie:
     secure: true
-    same-site: Strict
+    same-site: None
+    # Bắt buộc khi FE dùng SockJS qua ws.skillsync.sbs và API qua api.skillsync.sbs (cookie chung subdomain).
+    domain: ${COOKIE_DOMAIN:}
+
+  # CORS — chỉ từ env (skill_be/.env hoặc biến hệ thống). Không đặt URL cố định trong file này.
+  # CORS_ALLOWED_ORIGINS=https://skillsync.pages.dev,https://skillsync.sbs
+  # CORS_ALLOWED_ORIGIN_PATTERNS=https://*.skillsync.pages.dev
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:}
+    allowed-origin-patterns: ${CORS_ALLOWED_ORIGIN_PATTERNS:}
 
 google:
   client-id: ${GOOGLE_CLIENT_ID}

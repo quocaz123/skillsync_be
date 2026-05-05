@@ -12,4 +12,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class CookieProperties {
     private boolean secure;
     private String sameSite;
+    /** Khi đặt (vd. .skillsync.sbs), cookie dùng chung cho api.* và ws.* subdomain. */
+    private String domain;
 }

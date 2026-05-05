@@ -1,6 +1,5 @@
-# Profile pro: Aiven Kafka (SASL_SSL + SCRAM-SHA-256)
-# Trên Koyeb/Linux: hệ thống đã tin tưởng CA của Aiven → KAFKA_SSL_CA_CERT để rỗng là được.
-# Windows local: set KAFKA_SSL_CA_CERT = nội dung file ca.pem (1 dòng trong .env bằng cách escape newline).
+# Profile pro: Kafka PLAINTEXT (không dùng Aiven/SASL_SSL).
+# Đặt KAFKA_BOOTSTRAP_SERVERS trỏ đến broker bạn tự quản (ví dụ VM/VPS) hoặc dùng localhost khi demo.
 spring:
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
@@ -18,12 +17,6 @@ spring:
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       properties:
         spring.json.add.type.headers: false
-    properties:
-      sasl-username: ${KAFKA_SASL_USERNAME}
-      sasl-password: ${KAFKA_SASL_PASSWORD}
-      # Đường dẫn đến file ca.pem của Aiven — chỉ cần set khi chạy local Windows.
-      # Koyeb/Linux: để rỗng (hệ thống đã trust CA này).
-      ssl-ca-cert-path: ${KAFKA_SSL_CA_CERT_PATH:}
 
   thymeleaf:
     cache: true

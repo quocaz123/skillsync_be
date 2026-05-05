@@ -8,9 +8,6 @@ COPY mvnw .
 COPY .mvn .mvn
 COPY pom.xml .
 
-# Download dependencies (cache layer riêng)
-RUN chmod +x mvnw && ./mvnw dependency:go-offline -B
-
 # Copy source và build
 COPY src src
 RUN ./mvnw package -DskipTests -B

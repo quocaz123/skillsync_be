@@ -32,10 +32,10 @@ spring:
   # ── Redis — AI session memory ───────────────────────────
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      # password: ${REDIS_PASSWORD:}  # bỏ comment nếu Redis có auth
-      timeout: 2000ms                 # connection timeout
+      url: ${REDIS_URL}          # rediss://:<password>@<host>.upstash.io:6380
+      ssl:
+        enabled: true
+      timeout: 3000ms                # connection timeout
 
   # ── Kafka Producer (Notification Events) ────────────────
   kafka:
@@ -45,6 +45,11 @@ spring:
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       properties:
         spring.json.add.type.headers: false
+        # Fail-fast để Kafka lỗi không làm treo request lâu
+        delivery.timeout.ms: 10000
+        request.timeout.ms: 3000
+        max.block.ms: 2000
+        retries: 0
 
 
 jwt:
@@ -54,9 +59,18 @@ app:
   # Múi giờ khi đánh giá “slot còn trong tương lai hay không” (ngày + giờ do client gửi là giờ địa phương).
   timezone: ${APP_TIMEZONE:Asia/Ho_Chi_Minh}
 
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
+
   cookie:
     secure: false
     same-site: Lax
+    # Để trống = cookie chỉ cho đúng host phản hồi. Prod nếu tách api.* và ws.*: COOKIE_DOMAIN=.skillsync.sbs
+    domain: ${COOKIE_DOMAIN:}
+
+  cors:
+    # Chỉ từ env — ví dụ trong .env: CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:}
+    allowed-origin-patterns: ${CORS_ALLOWED_ORIGIN_PATTERNS:}
 
 google:
   client-id: ${GOOGLE_CLIENT_ID}
