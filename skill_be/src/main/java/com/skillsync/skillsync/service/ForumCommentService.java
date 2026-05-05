@@ -2,12 +2,14 @@ package com.skillsync.skillsync.service;
 
 import com.skillsync.skillsync.dto.request.forum.CreateCommentRequest;
 import com.skillsync.skillsync.dto.request.forum.UpdateCommentRequest;
+import com.skillsync.skillsync.dto.request.notification.NotificationCreateRequest;
 import com.skillsync.skillsync.dto.response.forum.CommentResponse;
 import com.skillsync.skillsync.entity.ForumComment;
 import com.skillsync.skillsync.entity.ForumPost;
 import com.skillsync.skillsync.entity.CommentVote;
 import com.skillsync.skillsync.entity.User;
 import com.skillsync.skillsync.enums.ForumPostStatus;
+import com.skillsync.skillsync.enums.NotificationType;
 import com.skillsync.skillsync.exception.AppException;
 import com.skillsync.skillsync.exception.ErrorCode;
 import com.skillsync.skillsync.repository.ForumCommentRepository;
@@ -17,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -25,6 +28,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +38,12 @@ public class ForumCommentService {
     private final ForumPostRepository postRepository;
     private final CommentVoteRepository commentVoteRepository;
     private final UserService userService;
+    private final NotificationService notificationService;
+
+    /** Regex để tìm @[Tên](uuid) trong nội dung comment */
+    private static final Pattern MENTION_PATTERN = Pattern.compile(
+        "@\\[([^\\]]+)\\]\\(([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\)"
+    );
 
     /**
      * Get all comments for a post (nested structure)
@@ -210,7 +221,62 @@ public class ForumCommentService {
                 .build();
 
         ForumComment saved = commentRepository.save(comment);
+
+        // Gửi notification tới tất cả người được @mention
+        try {
+            handleMentionNotifications(saved);
+        } catch (Exception e) {
+            // Không để lỗi notification làm fail comment
+            System.err.println("[Mention] Failed to send notifications: " + e.getMessage());
+        }
+
         return toResponse(saved);
+    }
+
+    /**
+     * Parse @[Tên](uuid) từ content và gửi notification tới mỗi người được tag.
+     * Giới hạn 10 mention/comment để tránh spam.
+     */
+    private void handleMentionNotifications(ForumComment comment) {
+        List<UUID> mentionedIds = parseMentions(comment.getContent());
+        UUID authorId = comment.getAuthor().getId();
+        String authorName = comment.getAuthor().getFullName();
+        UUID postId = comment.getPost().getId();
+
+        for (UUID mentionedId : mentionedIds) {
+            if (mentionedId.equals(authorId)) continue;
+            try {
+                notificationService.createAndSend(
+                    NotificationCreateRequest.builder()
+                        .userId(mentionedId)
+                        .type(NotificationType.FORUM_MENTION)
+                        .title("Bạn được đề cập trong cộng đồng")
+                        .content(authorName + " đã nhắc đến bạn trong một bình luận")
+                        .redirectUrl("/community?post=" + postId)
+                        .entityId(postId)
+                        .imageUrl(comment.getAuthor().getAvatarUrl())
+                        .build()
+                );
+            } catch (Exception e) {
+                System.err.println("[Mention] Cannot notify user " + mentionedId + ": " + e.getMessage());
+            }
+        }
+    }
+
+    /** Trích xuất danh sách UUID từ các @[Name](uuid) trong content, tối đa 10 */
+    private List<UUID> parseMentions(String content) {
+        if (content == null || content.isBlank()) return List.of();
+        List<UUID> result = new ArrayList<>();
+        Matcher matcher = MENTION_PATTERN.matcher(content);
+        while (matcher.find() && result.size() < 10) {
+            try {
+                UUID uid = UUID.fromString(matcher.group(2));
+                if (!result.contains(uid)) result.add(uid);
+            } catch (IllegalArgumentException ignored) {
+                // UUID không hợp lệ — bỏ qua
+            }
+        }
+        return result;
     }
 
     /**
@@ -253,6 +319,20 @@ public class ForumCommentService {
 
         ensurePostAccessible(comment.getPost(), currentUser);
 
+        deleteCommentRecursively(comment);
+    }
+
+    private void deleteCommentRecursively(ForumComment comment) {
+        // Delete all child replies first
+        List<ForumComment> replies = commentRepository.findByParentCommentIdOrderByCreatedAtAsc(comment.getId());
+        for (ForumComment reply : replies) {
+            deleteCommentRecursively(reply);
+        }
+        
+        // Delete votes for this comment
+        commentVoteRepository.deleteByCommentId(comment.getId());
+        
+        // Delete the comment itself
         commentRepository.delete(comment);
     }
 

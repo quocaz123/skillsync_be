@@ -21,6 +21,8 @@ public interface CommentVoteRepository extends JpaRepository<CommentVote, UUID> 
 
     void deleteByCommentIdAndUserId(UUID commentId, UUID userId);
 
+    void deleteByCommentId(UUID commentId);
+
     interface CommentLikeAgg {
         UUID getCommentId();
 

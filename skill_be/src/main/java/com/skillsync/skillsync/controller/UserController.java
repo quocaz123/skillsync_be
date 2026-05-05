@@ -4,6 +4,7 @@ import com.skillsync.skillsync.dto.common.ApiResponse;
 import com.skillsync.skillsync.dto.request.upload.UpdateAvatarRequest;
 import com.skillsync.skillsync.dto.request.user.UpdateBioRequest;
 import com.skillsync.skillsync.dto.request.user.UpdatePasswordRequest;
+import com.skillsync.skillsync.dto.response.user.MentionUserResponse;
 import com.skillsync.skillsync.dto.response.user.UserResponse;
 import com.skillsync.skillsync.dto.response.user.CreditTransactionResponse;
 import com.skillsync.skillsync.service.UserService;
@@ -59,4 +60,18 @@ public class UserController {
     public ApiResponse<UserResponse> getPublicProfile(@PathVariable java.util.UUID id) {
         return ApiResponse.success(userService.getPublicProfile(id));
     }
+
+    /**
+     * Tìm kiếm user cho @mention dropdown.
+     * Trả về danh sách tối giản: id, fullName, email (masked), avatarUrl.
+     * q: keyword tìm theo tên hoặc email, size: số lượng tối đa kết quả (mặc định 8, tối đa 20).
+     */
+    @GetMapping("/search")
+    public ApiResponse<List<MentionUserResponse>> searchForMention(
+            @RequestParam String q,
+            @RequestParam(defaultValue = "8") int size
+    ) {
+        return ApiResponse.success(userService.searchUsersForMention(q, size));
+    }
 }
+

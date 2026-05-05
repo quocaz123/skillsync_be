@@ -13,6 +13,7 @@ import com.skillsync.skillsync.enums.SkillCategory;
 import com.skillsync.skillsync.entity.CreditMission;
 import com.skillsync.skillsync.enums.MissionType;
 import com.skillsync.skillsync.repository.*;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.skillsync.skillsync.entity.UserTeachingSkill;
 import com.skillsync.skillsync.enums.VerificationStatus;
@@ -44,11 +45,19 @@ public class DataInitializer implements CommandLineRunner {
     private final ForumCategoryRepository forumCategoryRepository;
     private final ForumPostRepository forumPostRepository;
     private final UserTeachingSkillRepository userTeachingSkillRepository;
+    private final JdbcTemplate jdbcTemplate;
 
     private final ObjectMapper objectMapper;
 
     @Override
     public void run(String... args) {
+        try {
+            jdbcTemplate.execute("ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check");
+            log.info("✅ Dropped notifications_type_check constraint if it existed");
+        } catch (Exception e) {
+            log.warn("Could not drop constraint: {}", e.getMessage());
+        }
+
         seedUser("admin@skillsync.com", "Admin@123", Role.ADMIN, "System Admin");
         seedUser("user@skillsync.com",  "User@123",  Role.USER,  "Standard User");
 

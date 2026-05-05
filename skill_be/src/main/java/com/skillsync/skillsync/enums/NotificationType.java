@@ -14,5 +14,7 @@ public enum NotificationType {
     SKILL_VERIFIED,
     SKILL_REJECTED,
 
-    MISSION_REWARDED
+    MISSION_REWARDED,
+
+    FORUM_MENTION
 }

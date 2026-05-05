@@ -1,8 +1,10 @@
 package com.skillsync.skillsync.service;
 
 import com.skillsync.skillsync.dto.request.user.UpdatePasswordRequest;
+import com.skillsync.skillsync.dto.response.user.MentionUserResponse;
 import com.skillsync.skillsync.exception.AppException;
 import com.skillsync.skillsync.exception.ErrorCode;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import com.skillsync.skillsync.dto.request.upload.UpdateAvatarRequest;
 import com.skillsync.skillsync.dto.request.user.UpdateBioRequest;
@@ -34,7 +36,8 @@ public class UserService {
     public User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new com.skillsync.skillsync.exception.AppException(com.skillsync.skillsync.exception.ErrorCode.UNAUTHORIZED));
+                .orElseThrow(() -> new com.skillsync.skillsync.exception.AppException(
+                        com.skillsync.skillsync.exception.ErrorCode.UNAUTHORIZED));
     }
 
     private UserResponse buildFullResponse(User user) {
@@ -50,7 +53,6 @@ public class UserService {
         Integer pendingTeacher = sessionRepository.getTeacherPendingCredits(id);
 
         return UserResponse.builder()
-                // identity
                 .id(user.getId())
                 .email(user.getEmail())
                 .fullName(user.getFullName())
@@ -61,11 +63,9 @@ public class UserService {
                 .hasPassword(user.getHasPassword() != null ? user.getHasPassword() : true)
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
-                // gamification
                 .creditsBalance(user.getCreditsBalance())
                 .pendingLearnerCredits(pendingLearner)
                 .pendingTeacherCredits(pendingTeacher)
-                // stats
                 .totalTeachingSessions(teachingSessions)
                 .totalLearningSessions(learningSessions)
                 .averageRating(avgRating != null ? Math.round(avgRating * 10.0) / 10.0 : null)
@@ -88,6 +88,34 @@ public class UserService {
         return buildFullResponse(user);
     }
 
+    /**
+     * Tìm user cho @mention dropdown.
+     * Chỉ trả về id, fullName, email (rút gọn), avatarUrl — không lộ dữ liệu nhạy cảm.
+     */
+    public List<MentionUserResponse> searchUsersForMention(String q, int size) {
+        if (q == null || q.trim().length() < 2) return List.of();
+        int safeSize = Math.min(Math.max(size, 1), 20);
+        return userRepository.searchForMention(q.trim(), PageRequest.of(0, safeSize))
+                .stream()
+                .map(u -> MentionUserResponse.builder()
+                        .id(u.getId())
+                        .fullName(u.getFullName())
+                        .email(maskEmail(u.getEmail()))
+                        .avatarUrl(u.getAvatarUrl())
+                        .build())
+                .toList();
+    }
+
+    /** Rút gọn email: abc@gmail.com → a**@gmail.com */
+    private String maskEmail(String email) {
+        if (email == null || !email.contains("@")) return email;
+        String[] parts = email.split("@", 2);
+        String local = parts[0];
+        String domain = parts[1];
+        if (local.length() <= 1) return email;
+        return local.charAt(0) + "**@" + domain;
+    }
+
     public List<CreditTransactionResponse> getMyTransactions() {
         User user = getCurrentUser();
         return creditTransactionRepository.findAllByUserIdOrderByCreatedAtDesc(user.getId())
@@ -108,7 +136,6 @@ public class UserService {
 
         User user = getCurrentUser();
 
-        // Xóa avatar cũ trên R2 nếu có
         if (user.getAvatarKey() != null && !user.getAvatarKey().isBlank()) {
             fileUploadService.deleteFileByKey(user.getAvatarKey());
         }
@@ -180,6 +207,7 @@ public class UserService {
                 .createdAt(user.getCreatedAt())
                 .build();
     }
+
     public List<UserResponse> getAllUsers() {
         return userRepository.findAll().stream()
                 .map(this::buildFullResponse)
