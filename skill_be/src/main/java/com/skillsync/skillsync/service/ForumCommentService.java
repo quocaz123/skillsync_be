@@ -252,7 +252,7 @@ public class ForumCommentService {
                         .type(NotificationType.FORUM_MENTION)
                         .title("Bạn được đề cập trong cộng đồng")
                         .content(authorName + " đã nhắc đến bạn trong một bình luận")
-                        .redirectUrl("/community?post=" + postId)
+                        .redirectUrl("/app/community?post=" + postId)
                         .entityId(postId)
                         .imageUrl(comment.getAuthor().getAvatarUrl())
                         .build()

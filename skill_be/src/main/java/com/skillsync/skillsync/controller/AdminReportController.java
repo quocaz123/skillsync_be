@@ -4,7 +4,9 @@ import com.skillsync.skillsync.dto.common.ApiResponse;
 import com.skillsync.skillsync.dto.request.report.ResolveReportRequest;
 import com.skillsync.skillsync.dto.response.report.ReportResponse;
 import com.skillsync.skillsync.entity.SessionReport;
+import com.skillsync.skillsync.enums.LogLevel;
 import com.skillsync.skillsync.service.SessionReportService;
+import com.skillsync.skillsync.service.SystemLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,6 +20,7 @@ import java.util.stream.Collectors;
 public class AdminReportController {
 
     private final SessionReportService reportService;
+    private final SystemLogService systemLogService;
 
     @GetMapping
     public ApiResponse<List<ReportResponse>> getAllReports() {
@@ -30,6 +33,12 @@ public class AdminReportController {
             @PathVariable UUID reportId,
             @RequestBody ResolveReportRequest request) {
         SessionReport report = reportService.resolveReport(reportId, request.getResolution(), request.getAdminNotes());
+        systemLogService.logSystemEvent(
+                "Xu ly bao cao session: reportId=" + report.getId()
+                        + " | status=" + report.getStatus()
+                        + " | sessionId=" + report.getSession().getId(),
+                LogLevel.WARNING
+        );
         return ApiResponse.success(toResponse(report));
     }
 

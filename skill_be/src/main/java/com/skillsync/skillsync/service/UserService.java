@@ -122,12 +122,37 @@ public class UserService {
                 .stream()
                 .map(tx -> CreditTransactionResponse.builder()
                         .id(tx.getId())
-                        .amount(tx.getAmount())
+                        .amount(normalizeAmountByType(tx.getAmount(), tx.getTransactionType()))
                         .transactionType(tx.getTransactionType())
-                        .description(tx.getDescription())
+                        .description(toVietnameseDescription(tx))
                         .createdAt(tx.getCreatedAt())
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    private Integer normalizeAmountByType(Integer rawAmount, com.skillsync.skillsync.enums.TransactionType type) {
+        int value = rawAmount != null ? rawAmount : 0;
+        int absValue = Math.abs(value);
+        return switch (type) {
+            case SPEND_SESSION, SPEND_LEARNING_PATH, PENALTY -> -absValue;
+            case EARN_SESSION, EARN_LEARNING_PATH, MISSION_REWARD, REFUND, WELCOME_BONUS -> absValue;
+        };
+    }
+
+    private String toVietnameseDescription(com.skillsync.skillsync.entity.CreditTransaction tx) {
+        String fallback = tx.getDescription() != null ? tx.getDescription() : "Giao dịch credits";
+        if (tx.getTransactionType() == null) return fallback;
+
+        return switch (tx.getTransactionType()) {
+            case SPEND_SESSION -> "Thanh toán buổi học";
+            case EARN_SESSION -> "Nhận credits từ buổi dạy";
+            case SPEND_LEARNING_PATH -> "Thanh toán lộ trình học";
+            case EARN_LEARNING_PATH -> "Nhận credits từ lộ trình học";
+            case MISSION_REWARD -> "Thưởng nhiệm vụ";
+            case REFUND -> "Hoàn credits";
+            case WELCOME_BONUS -> "Thưởng chào mừng";
+            case PENALTY -> "Khấu trừ credits";
+        };
     }
 
     public UserResponse updateAvatar(UpdateAvatarRequest request) {
@@ -164,9 +189,14 @@ public class UserService {
 
     // ─── Admin API ───────────────────────────────────────────────────────────
 
-    public List<com.skillsync.skillsync.dto.response.admin.AdminUserResponse> getAllUsersForAdmin() {
-        return userRepository.findAll().stream()
-                .map(u -> com.skillsync.skillsync.dto.response.admin.AdminUserResponse.builder()
+    public com.skillsync.skillsync.dto.common.PageResponse<com.skillsync.skillsync.dto.response.admin.AdminUserResponse> getAllUsersForAdmin(String search, int page, int size) {
+        String searchQuery = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
+        org.springframework.data.domain.Page<User> usersPage = userRepository.searchAllForAdmin(
+                searchQuery,
+                org.springframework.data.domain.PageRequest.of(page, size, org.springframework.data.domain.Sort.by("createdAt").descending()));
+        
+        org.springframework.data.domain.Page<com.skillsync.skillsync.dto.response.admin.AdminUserResponse> dtoPage = usersPage.map(u -> 
+                com.skillsync.skillsync.dto.response.admin.AdminUserResponse.builder()
                         .id(u.getId())
                         .email(u.getEmail())
                         .fullName(u.getFullName())
@@ -176,8 +206,8 @@ public class UserService {
                         .creditsBalance(u.getCreditsBalance())
                         .createdAt(u.getCreatedAt())
                         .build()
-                ).sorted((u1, u2) -> u2.getCreatedAt().compareTo(u1.getCreatedAt()))
-                .collect(Collectors.toList());
+        );
+        return com.skillsync.skillsync.dto.common.PageResponse.from(dtoPage);
     }
 
     public com.skillsync.skillsync.dto.response.admin.AdminUserResponse toggleUserBanStatus(java.util.UUID userId) {

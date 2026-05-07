@@ -7,6 +7,8 @@ import lombok.Data;
 @Builder
 public class AdminStatsResponse {
     private long totalUsers;
+    private long totalAdmins;
+    private long totalBanned;
     private long totalSessions;
     private long activeSessions;       // SCHEDULED
     private long completedSessions;    // COMPLETED

@@ -8,6 +8,7 @@ import com.skillsync.skillsync.dto.response.learningpath.LearningPathLessonRespo
 import com.skillsync.skillsync.dto.response.learningpath.LearningPathModuleResponse;
 import com.skillsync.skillsync.dto.response.learningpath.LearningPathResponse;
 import com.skillsync.skillsync.entity.LearningPath;
+import com.skillsync.skillsync.entity.CreditTransaction;
 import com.skillsync.skillsync.entity.LearningPathEnrollment;
 import com.skillsync.skillsync.entity.LearningPathLesson;
 import com.skillsync.skillsync.entity.LearningPathModule;
@@ -17,6 +18,8 @@ import com.skillsync.skillsync.exception.ErrorCode;
 import com.skillsync.skillsync.enums.LearningPathStatus;
 import com.skillsync.skillsync.enums.RegistrationType;
 import com.skillsync.skillsync.enums.Role;
+import com.skillsync.skillsync.enums.TransactionType;
+import com.skillsync.skillsync.repository.CreditTransactionRepository;
 import com.skillsync.skillsync.repository.LearningPathEnrollmentRepository;
 import com.skillsync.skillsync.repository.LearningPathRepository;
 import com.skillsync.skillsync.repository.UserRepository;
@@ -43,6 +46,7 @@ public class LearningPathService {
     private final LearningPathRepository learningPathRepository;
     private final LearningPathEnrollmentRepository learningPathEnrollmentRepository;
     private final LearningPathReviewRepository learningPathReviewRepository;
+    private final CreditTransactionRepository creditTransactionRepository;
     private final UserRepository userRepository;
     private final UserService userService;
     @PersistenceContext
@@ -67,7 +71,9 @@ public class LearningPathService {
     public List<LearningPathResponse> getMyPaths() {
         User user = userService.getCurrentUser();
         return learningPathRepository.findByTeacherIdOrderByCreatedAtDesc(user.getId())
-                .stream().map(this::toResponse).toList();
+                .stream()
+                .filter(lp -> lp.getStatus() != LearningPathStatus.ARCHIVED)
+                .map(this::toResponse).toList();
     }
 
     /** GET enrolled paths — learner sees enrolled paths from DB */
@@ -181,6 +187,27 @@ public class LearningPathService {
         return toResponse(learningPathRepository.save(lp));
     }
 
+    /** DELETE - Hybrid Delete */
+    @Transactional
+    public void deletePath(UUID id) {
+        User user = userService.getCurrentUser();
+        LearningPath lp = learningPathRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Lộ trình không tồn tại"));
+
+        if (!lp.getTeacher().getId().equals(user.getId()) && user.getRole() != Role.ADMIN) {
+            throw new AppException(ErrorCode.FORBIDDEN, "Bạn không có quyền xóa lộ trình này");
+        }
+
+        if (lp.getEnrollments() == null || lp.getEnrollments().isEmpty()) {
+            // Hard delete
+            learningPathRepository.delete(lp);
+        } else {
+            // Soft delete (Archive)
+            lp.setStatus(LearningPathStatus.ARCHIVED);
+            learningPathRepository.save(lp);
+        }
+    }
+
     /** POST enroll current user into approved path */
     @Transactional
     public LearningPathEnrollResponse enroll(UUID learningPathId) {
@@ -211,6 +238,31 @@ public class LearningPathService {
         if (cost > 0) {
             student.setCreditsBalance(balance - cost);
             userRepository.save(student);
+
+            CreditTransaction spendTx = CreditTransaction.builder()
+                    .user(student)
+                    .amount(-Math.abs(cost))
+                    .transactionType(TransactionType.SPEND_LEARNING_PATH)
+                    .referenceId(lp.getId())
+                    .description("Thanh toán đăng ký lộ trình: " + lp.getTitle())
+                    .build();
+            creditTransactionRepository.save(spendTx);
+
+            User teacher = lp.getTeacher();
+            if (teacher != null && !teacher.getId().equals(student.getId())) {
+                int teacherBalance = teacher.getCreditsBalance() != null ? teacher.getCreditsBalance() : 0;
+                teacher.setCreditsBalance(teacherBalance + cost);
+                userRepository.save(teacher);
+
+                CreditTransaction earnTx = CreditTransaction.builder()
+                        .user(teacher)
+                        .amount(Math.abs(cost))
+                        .transactionType(TransactionType.EARN_LEARNING_PATH)
+                        .referenceId(lp.getId())
+                        .description("Nhận credits từ đăng ký lộ trình: " + lp.getTitle())
+                        .build();
+                creditTransactionRepository.save(earnTx);
+            }
         }
 
         LearningPathEnrollment enrollment = LearningPathEnrollment.builder()

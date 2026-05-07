@@ -2,8 +2,10 @@ package com.skillsync.skillsync.service;
 
 import com.skillsync.skillsync.dto.AdminTransactionDTO;
 import com.skillsync.skillsync.dto.GrantCreditRequest;
+import com.skillsync.skillsync.dto.request.notification.NotificationCreateRequest;
 import com.skillsync.skillsync.entity.CreditTransaction;
 import com.skillsync.skillsync.entity.User;
+import com.skillsync.skillsync.enums.NotificationType;
 import com.skillsync.skillsync.repository.CreditTransactionRepository;
 import com.skillsync.skillsync.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +23,7 @@ public class AdminCreditService {
     private final CreditTransactionRepository transactionRepository;
     private final UserRepository userRepository;
     private final NotificationEventPublisher notificationEventPublisher;
+    private final NotificationService notificationService;
 
     public List<AdminTransactionDTO> getAllTransactions() {
         return transactionRepository.findAllByOrderByCreatedAtDesc()
@@ -50,6 +53,18 @@ public class AdminCreditService {
 
         // Email (Kafka) — coi như nạp credits thủ công từ admin
         // amount/balance để dạng string theo CreditEvent DTO bên notification service
+        NotificationType inAppType = request.getAmount() >= 0 ? NotificationType.CREDIT_EARNED : NotificationType.CREDIT_SPENT;
+        String actionText = request.getAmount() >= 0 ? "cộng" : "trừ";
+        notificationService.createAndSend(NotificationCreateRequest.builder()
+                .userId(user.getId())
+                .type(inAppType)
+                .title("Biến động số dư Credits")
+                .content("Tài khoản của bạn vừa được " + actionText + " " + Math.abs(request.getAmount()) + " credits.")
+                .redirectUrl("/app/credits")
+                .entityId(savedTx.getReferenceId())
+                .imageUrl(user.getAvatarUrl())
+                .build());
+
         if (user.getEmail() != null && !user.getEmail().isBlank()) {
             notificationEventPublisher.publishCreditEvent(
                     "DEPOSIT_SUCCESS",

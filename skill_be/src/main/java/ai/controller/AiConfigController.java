@@ -1,10 +1,13 @@
 package ai.controller;
 
 import ai.config.AiConfigHolder;
+import com.skillsync.skillsync.enums.LogLevel;
+import com.skillsync.skillsync.service.SystemLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.Map;
 
 /**
@@ -19,6 +22,7 @@ import java.util.Map;
 public class AiConfigController {
 
     private final AiConfigHolder config;
+    private final SystemLogService systemLogService;
 
     @GetMapping
     public ResponseEntity<Map<String, Object>> getConfig() {
@@ -27,39 +31,67 @@ public class AiConfigController {
 
     @PutMapping
     public ResponseEntity<Map<String, Object>> updateConfig(@RequestBody Map<String, Object> body) {
+        var changedKeys = new ArrayList<String>();
         // ── Groq ──────────────────────────────────────────────────────────
-        if (body.containsKey("groqModel"))
+        if (body.containsKey("groqModel")) {
             config.setGroqModel((String) body.get("groqModel"));
+            changedKeys.add("groqModel");
+        }
 
-        if (body.containsKey("groqTemperature"))
+        if (body.containsKey("groqTemperature")) {
             config.setGroqTemperature(toDouble(body.get("groqTemperature")));
+            changedKeys.add("groqTemperature");
+        }
 
-        if (body.containsKey("groqMaxOutputTokens"))
+        if (body.containsKey("groqMaxOutputTokens")) {
             config.setGroqMaxOutputTokens(toInt(body.get("groqMaxOutputTokens")));
+            changedKeys.add("groqMaxOutputTokens");
+        }
 
         // ── Session ───────────────────────────────────────────────────────
-        if (body.containsKey("sessionTtlMinutes"))
+        if (body.containsKey("sessionTtlMinutes")) {
             config.setSessionTtlMinutes(toInt(body.get("sessionTtlMinutes")));
+            changedKeys.add("sessionTtlMinutes");
+        }
 
-        if (body.containsKey("sessionMaxRecentTurns"))
+        if (body.containsKey("sessionMaxRecentTurns")) {
             config.setSessionMaxRecentTurns(toInt(body.get("sessionMaxRecentTurns")));
+            changedKeys.add("sessionMaxRecentTurns");
+        }
 
-        if (body.containsKey("sessionSummaryTrigger"))
+        if (body.containsKey("sessionSummaryTrigger")) {
             config.setSessionSummaryTrigger(toInt(body.get("sessionSummaryTrigger")));
+            changedKeys.add("sessionSummaryTrigger");
+        }
 
         // ── Search ────────────────────────────────────────────────────────
-        if (body.containsKey("vectorSearchEnabled"))
+        if (body.containsKey("vectorSearchEnabled")) {
             config.setVectorSearchEnabled((Boolean) body.get("vectorSearchEnabled"));
+            changedKeys.add("vectorSearchEnabled");
+        }
 
-        if (body.containsKey("vectorSearchThreshold"))
+        if (body.containsKey("vectorSearchThreshold")) {
             config.setVectorSearchThreshold(toDouble(body.get("vectorSearchThreshold")));
+            changedKeys.add("vectorSearchThreshold");
+        }
 
-        if (body.containsKey("vectorMinPrimaryResults"))
+        if (body.containsKey("vectorMinPrimaryResults")) {
             config.setVectorMinPrimaryResults(toInt(body.get("vectorMinPrimaryResults")));
+            changedKeys.add("vectorMinPrimaryResults");
+        }
 
         // ── Feature flags ─────────────────────────────────────────────────
-        if (body.containsKey("enrichReasonsEnabled"))
+        if (body.containsKey("enrichReasonsEnabled")) {
             config.setEnrichReasonsEnabled((Boolean) body.get("enrichReasonsEnabled"));
+            changedKeys.add("enrichReasonsEnabled");
+        }
+
+        if (!changedKeys.isEmpty()) {
+            systemLogService.logSystemEvent(
+                    "Cap nhat AI config: " + String.join(", ", changedKeys),
+                    LogLevel.WARNING
+            );
+        }
 
         return ResponseEntity.ok(toMap());
     }

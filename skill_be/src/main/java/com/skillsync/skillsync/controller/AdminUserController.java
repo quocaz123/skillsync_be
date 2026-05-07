@@ -20,8 +20,11 @@ public class AdminUserController {
     private final SystemLogService systemLogService;
 
     @GetMapping
-    public ApiResponse<List<AdminUserResponse>> getAllUsers() {
-        return ApiResponse.success(userService.getAllUsersForAdmin());
+    public ApiResponse<com.skillsync.skillsync.dto.common.PageResponse<AdminUserResponse>> getAllUsers(
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ApiResponse.success(userService.getAllUsersForAdmin(search, page, size));
     }
 
     @PatchMapping("/{userId}/toggle-ban")

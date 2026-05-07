@@ -61,6 +61,8 @@ public class AdminStatsController {
 
         AdminStatsResponse stats = AdminStatsResponse.builder()
                 .totalUsers(userRepository.count())
+                .totalAdmins(userRepository.countByRole(com.skillsync.skillsync.enums.Role.ADMIN))
+                .totalBanned(userRepository.countByStatus(com.skillsync.skillsync.enums.UserStatus.BANNED))
                 .totalSessions(totalSessions)
                 .activeSessions(activeSessions)
                 .completedSessions(completedSessions)

@@ -3,14 +3,15 @@ package com.skillsync.skillsync.controller;
 import com.skillsync.skillsync.dto.common.ApiResponse;
 import com.skillsync.skillsync.dto.response.admin.AdminCreditTransactionResponse;
 import com.skillsync.skillsync.entity.CreditTransaction;
+import com.skillsync.skillsync.enums.LogLevel;
 import com.skillsync.skillsync.enums.TransactionType;
 import com.skillsync.skillsync.repository.CreditTransactionRepository;
 import lombok.RequiredArgsConstructor;
 import com.skillsync.skillsync.dto.AdminTransactionDTO;
 import com.skillsync.skillsync.dto.GrantCreditRequest;
 import com.skillsync.skillsync.service.AdminCreditService;
+import com.skillsync.skillsync.service.SystemLogService;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -26,6 +27,7 @@ public class AdminCreditController {
 
     private final CreditTransactionRepository creditTransactionRepository;
     private final AdminCreditService adminCreditService;
+    private final SystemLogService systemLogService;
 
     /**
      * GET /api/admin/credits/transactions?type=SPEND_SESSION
@@ -78,6 +80,13 @@ public class AdminCreditController {
 
     @PostMapping("/grant")
     public ResponseEntity<AdminTransactionDTO> grantCredit(@Valid @RequestBody GrantCreditRequest request) {
-        return ResponseEntity.ok(adminCreditService.grantCredit(request));
+        AdminTransactionDTO result = adminCreditService.grantCredit(request);
+        systemLogService.logSystemEvent(
+                "Cap credit thu cong: user=" + result.getUserEmail()
+                        + " | amount=" + result.getAmount()
+                        + " | type=" + result.getTransactionType(),
+                LogLevel.WARNING
+        );
+        return ResponseEntity.ok(result);
     }
 }

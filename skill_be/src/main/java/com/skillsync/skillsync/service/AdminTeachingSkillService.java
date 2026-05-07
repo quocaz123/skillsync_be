@@ -1,10 +1,12 @@
 package com.skillsync.skillsync.service;
 
 import com.skillsync.skillsync.dto.request.skill.VerifyTeachingSkillRequest;
+import com.skillsync.skillsync.dto.request.notification.NotificationCreateRequest;
 import com.skillsync.skillsync.dto.response.skill.AdminTeachingSkillResponse;
 import com.skillsync.skillsync.entity.TeachingSkillEvidence;
 import com.skillsync.skillsync.entity.User;
 import com.skillsync.skillsync.entity.UserTeachingSkill;
+import com.skillsync.skillsync.enums.NotificationType;
 import com.skillsync.skillsync.enums.VerificationStatus;
 import com.skillsync.skillsync.exception.AppException;
 import com.skillsync.skillsync.exception.ErrorCode;
@@ -26,6 +28,7 @@ public class AdminTeachingSkillService {
     private final TeachingSkillEvidenceRepository evidenceRepository;
     private final UserService userService;
     private final NotificationEventPublisher notificationEventPublisher;
+    private final NotificationService notificationService;
 
     /** Lấy tất cả teaching skills, lọc theo status nếu có */
     public List<AdminTeachingSkillResponse> getAll(VerificationStatus status) {
@@ -61,12 +64,30 @@ public class AdminTeachingSkillService {
                 : null);
 
         if ("APPROVED".equalsIgnoreCase(request.getAction())) {
+            notificationService.createAndSend(NotificationCreateRequest.builder()
+                    .userId(ts.getUser().getId())
+                    .type(NotificationType.SKILL_VERIFIED)
+                    .title("Kỹ năng đã được phê duyệt")
+                    .content("Kỹ năng " + ts.getSkill().getName() + " của bạn đã được admin phê duyệt.")
+                    .redirectUrl("/app/teaching-skills")
+                    .entityId(ts.getId())
+                    .imageUrl(ts.getUser().getAvatarUrl())
+                    .build());
             notificationEventPublisher.publishSkillEvent("SKILL_VERIFIED",
                     ts.getUser().getEmail(),
                     ts.getUser().getFullName(),
                     ts.getSkill().getName(),
                     null);
         } else {
+            notificationService.createAndSend(NotificationCreateRequest.builder()
+                    .userId(ts.getUser().getId())
+                    .type(NotificationType.SKILL_REJECTED)
+                    .title("Kỹ năng chưa được phê duyệt")
+                    .content("Kỹ năng " + ts.getSkill().getName() + " bị từ chối. Lý do: " + request.getRejectionReason())
+                    .redirectUrl("/app/teaching-skills")
+                    .entityId(ts.getId())
+                    .imageUrl(ts.getUser().getAvatarUrl())
+                    .build());
             notificationEventPublisher.publishSkillEvent("SKILL_REJECTED",
                     ts.getUser().getEmail(),
                     ts.getUser().getFullName(),

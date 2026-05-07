@@ -34,7 +34,8 @@ public class UserMissionService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        List<CreditMission> allMissions = creditMissionRepository.findByStatus(com.skillsync.skillsync.enums.MissionStatus.ACTIVE);
+        List<CreditMission> allMissions = creditMissionRepository
+                .findByStatus(com.skillsync.skillsync.enums.MissionStatus.ACTIVE);
         List<UserMission> userMissions = userMissionRepository.findAllByUserId(user.getId());
 
         return allMissions.stream().map(mission -> {
@@ -104,18 +105,13 @@ public class UserMissionService {
                 throw new AppException(ErrorCode.MISSION_ALREADY_COMPLETED, "Mission already completed");
             } else if (mission.getMissionType() == MissionType.DAILY) {
                 if (um.getRewardClaimedAt() != null && um.getRewardClaimedAt().toLocalDate().equals(LocalDate.now())) {
-                    throw new AppException(ErrorCode.MISSION_ALREADY_COMPLETED, "Daily mission already completed today");
+                    throw new AppException(ErrorCode.MISSION_ALREADY_COMPLETED,
+                            "Daily mission already completed today");
                 }
             }
         }
 
         if (!um.getIsCompleted() && (um.getProgress() == null || um.getProgress() < 1)) {
-            // Check if it's the 30-min online task, FE just calls complete blindly, but
-            // backend should ideally rely on trackAction
-            // We allow frontend to skip trackAction for ONLINE_30_MINS and just call
-            // complete, but to be strict, we'll enforce it.
-            // The FE must call trackAction first or we can bypass for ONLINE_30_MINS as FE
-            // doesn't do multiple POSTs easily for time.
             if (!mission.getTargetAction().equals("ONLINE_30_MINS")) {
                 throw new AppException(ErrorCode.MISSION_REQUIREMENTS_NOT_MET, "Chưa hoàn thành yêu cầu của nhiệm vụ.");
             }
@@ -152,7 +148,8 @@ public class UserMissionService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        List<CreditMission> missions = creditMissionRepository.findByTargetActionAndStatus(action, com.skillsync.skillsync.enums.MissionStatus.ACTIVE);
+        List<CreditMission> missions = creditMissionRepository.findByTargetActionAndStatus(action,
+                com.skillsync.skillsync.enums.MissionStatus.ACTIVE);
         for (CreditMission m : missions) {
             UserMission um = userMissionRepository.findByUserIdAndMissionId(user.getId(), m.getId())
                     .orElseGet(

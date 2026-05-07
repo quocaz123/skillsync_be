@@ -83,4 +83,11 @@ public class LearningPathController {
             @RequestBody @jakarta.validation.Valid com.skillsync.skillsync.dto.request.learningpath.LearningPathReviewRequest request) {
         return ApiResponse.success(learningPathService.addReview(id, request));
     }
+
+    /** Xóa lộ trình (Mentor / Admin) */
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> delete(@PathVariable UUID id) {
+        learningPathService.deletePath(id);
+        return ApiResponse.success(null);
+    }
 }

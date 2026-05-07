@@ -1,6 +1,7 @@
 package com.skillsync.skillsync.service;
 
 import com.skillsync.skillsync.dto.request.forum.CreateForumPostRequest;
+import com.skillsync.skillsync.dto.request.notification.NotificationCreateRequest;
 import com.skillsync.skillsync.dto.request.forum.UpdateForumPostRequest;
 import com.skillsync.skillsync.dto.request.forum.VerifyForumPostRequest;
 import com.skillsync.skillsync.dto.event.forum.ForumPostChangedEvent;
@@ -11,6 +12,7 @@ import com.skillsync.skillsync.entity.ForumCategory;
 import com.skillsync.skillsync.entity.ForumPost;
 import com.skillsync.skillsync.entity.User;
 import com.skillsync.skillsync.enums.ForumPostStatus;
+import com.skillsync.skillsync.enums.NotificationType;
 import com.skillsync.skillsync.enums.PostType;
 import com.skillsync.skillsync.enums.VoteType;
 import com.skillsync.skillsync.exception.AppException;
@@ -35,15 +37,19 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
 public class ForumPostService {
+    private static final Pattern MENTION_PATTERN = Pattern.compile("@\\[([^\\]]+)]\\(([^)]+)\\)");
     private final ForumPostRepository postRepository;
     private final ForumCategoryRepository categoryRepository;
     private final PostVoteRepository voteRepository;
     private final PostSaveRepository saveRepository;
     private final UserService userService;
+    private final NotificationService notificationService;
     private final ForumCommentService commentService;
     private final ForumRealtimeEventService forumRealtimeEventService;
 
@@ -153,6 +159,7 @@ public class ForumPostService {
                 .build();
 
         ForumPost saved = postRepository.save(post);
+        notifyMentionedUsersInPost(saved, Set.of(), author);
         forumRealtimeEventService.publishForumPostChangedEvent(
             ForumPostChangedEvent.builder()
                 .action("CREATE")
@@ -177,6 +184,7 @@ public class ForumPostService {
         User currentUser = userService.getCurrentUser();
         ForumPost post = postRepository.findById(postId)
                 .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Post not found with id: " + postId));
+        Set<UUID> previousMentions = parseMentions(post.getContent());
 
         if (!post.getAuthor().getId().equals(currentUser.getId())) {
             throw new AppException(ErrorCode.FORBIDDEN, "Unauthorized: only author can update this post");
@@ -211,6 +219,7 @@ public class ForumPostService {
         post.setReviewedAt(null);
 
         ForumPost updated = postRepository.save(post);
+        notifyMentionedUsersInPost(updated, previousMentions, currentUser);
         forumRealtimeEventService.publishForumPostChangedEvent(
             ForumPostChangedEvent.builder()
                 .action("UPDATE")
@@ -576,5 +585,44 @@ public class ForumPostService {
         boolean isAdmin = currentUser.getRole() != null && "ADMIN".equalsIgnoreCase(currentUser.getRole().name());
         boolean isAuthor = post.getAuthor() != null && post.getAuthor().getId().equals(currentUser.getId());
         return isAdmin || isAuthor;
+    }
+
+    private Set<UUID> parseMentions(String content) {
+        if (content == null || content.isBlank()) return Set.of();
+        Set<UUID> result = new HashSet<>();
+        Matcher matcher = MENTION_PATTERN.matcher(content);
+        while (matcher.find() && result.size() < 10) {
+            try {
+                result.add(UUID.fromString(matcher.group(2)));
+            } catch (IllegalArgumentException ignored) {
+                // Ignore invalid mention user id
+            }
+        }
+        return result;
+    }
+
+    private void notifyMentionedUsersInPost(ForumPost post, Set<UUID> previousMentions, User actor) {
+        Set<UUID> currentMentions = new HashSet<>(parseMentions(post.getContent()));
+        currentMentions.removeAll(previousMentions);
+
+        UUID actorId = actor != null ? actor.getId() : null;
+        for (UUID mentionedId : currentMentions) {
+            if (mentionedId == null || mentionedId.equals(actorId)) continue;
+            try {
+                notificationService.createAndSend(
+                        NotificationCreateRequest.builder()
+                                .userId(mentionedId)
+                                .type(NotificationType.FORUM_MENTION)
+                                .title("Bạn được nhắc tới trong bài viết")
+                                .content((actor != null ? actor.getFullName() : "Một người dùng") + " đã nhắc tới bạn trong một bài viết cộng đồng.")
+                                .redirectUrl("/app/community?post=" + post.getId())
+                                .entityId(post.getId())
+                                .imageUrl(actor != null ? actor.getAvatarUrl() : null)
+                                .build()
+                );
+            } catch (Exception ignored) {
+                // Do not break post flow if mention notification fails
+            }
+        }
     }
 }

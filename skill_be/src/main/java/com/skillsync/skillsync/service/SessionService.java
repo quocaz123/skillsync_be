@@ -49,6 +49,7 @@ public class SessionService {
     private final UserTeachingSkillRepository userTeachingSkillRepository;
     private final NotificationEventPublisher notificationEventPublisher;
     private final SessionReportRepository sessionReportRepository;
+    private final UserMissionService userMissionService;
 
     // ── Book (Request) ──────────────────────────────────────
     @Transactional
@@ -285,7 +286,7 @@ public class SessionService {
         // Lưu transaction
         CreditTransaction tx = CreditTransaction.builder()
                 .user(learner)
-                .amount(cost)
+                .amount(-Math.abs(cost))
                 .transactionType(TransactionType.SPEND_SESSION)
                 .referenceId(session.getId())
                 .description("Paid for session " + session.getVideoRoomId())
@@ -573,10 +574,44 @@ public class SessionService {
         boolean ranLongEnough = session.getStartedAt() != null
                 && java.time.Duration.between(session.getStartedAt(), LocalDateTime.now()).toMinutes() >= 2;
 
+        boolean shouldComplete = bothLeft || (ranLongEnough && (session.getTeacherLeftAt() != null || session.getLearnerLeftAt() != null));
+        boolean justCompleted = shouldComplete && session.getStatus() != SessionStatus.COMPLETED;
+
         // Chỉ kết thúc session nếu cả hai cùng thoát hoặc một bên thoát sau khi phòng chạy đủ lâu
-        if (bothLeft || (ranLongEnough && (session.getTeacherLeftAt() != null || session.getLearnerLeftAt() != null))) {
+        if (justCompleted) {
             session.setEndedAt(LocalDateTime.now());
             session.setStatus(SessionStatus.COMPLETED);
+
+            notificationService.createAndSend(NotificationCreateRequest.builder()
+                    .userId(session.getLearner().getId())
+                    .type(NotificationType.SESSION_COMPLETED)
+                    .title("Buổi học đã hoàn tất")
+                    .content("Buổi học với " + session.getTeacher().getFullName() + " đã hoàn tất. Bạn có thể xác nhận để giải ngân credits.")
+                    .entityId(session.getId())
+                    .redirectUrl("/app/sessions")
+                    .imageUrl(session.getTeacher().getAvatarUrl())
+                    .build());
+
+            notificationService.createAndSend(NotificationCreateRequest.builder()
+                    .userId(session.getTeacher().getId())
+                    .type(NotificationType.SESSION_COMPLETED)
+                    .title("Buổi dạy đã hoàn tất")
+                    .content("Buổi dạy với " + session.getLearner().getFullName() + " đã hoàn tất.")
+                    .entityId(session.getId())
+                    .redirectUrl("/app/teaching")
+                    .imageUrl(session.getLearner().getAvatarUrl())
+                    .build());
+            
+            // Track missions
+            try {
+                userMissionService.trackAction(session.getLearner().getEmail(), "JOIN_SESSION");
+                userMissionService.trackAction(session.getLearner().getEmail(), "FIRST_SESSION_JOINED");
+                
+                userMissionService.trackAction(session.getTeacher().getEmail(), "JOIN_SESSION");
+                userMissionService.trackAction(session.getTeacher().getEmail(), "FIRST_SESSION_TAUGHT");
+            } catch (Exception e) {
+                log.error("Failed to track missions for session {}: {}", session.getId(), e.getMessage());
+            }
         }
 
         sessionRepository.save(session);
@@ -615,6 +650,16 @@ public class SessionService {
                 .description("Earned from session " + session.getVideoRoomId())
                 .build();
         transactionRepository.save(tx);
+
+        notificationService.createAndSend(NotificationCreateRequest.builder()
+                .userId(teacher.getId())
+                .type(NotificationType.CREDIT_EARNED)
+                .title("Bạn đã nhận Credits từ buổi dạy")
+                .content("Bạn vừa nhận " + session.getCreditCost() + " credits từ session " + session.getVideoRoomId() + ".")
+                .entityId(session.getId())
+                .redirectUrl("/app/credits")
+                .imageUrl(session.getLearner().getAvatarUrl())
+                .build());
     }
 
     // ── Admin Escrow Management ─────────────────────────────

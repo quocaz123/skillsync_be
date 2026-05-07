@@ -2,9 +2,11 @@ package com.skillsync.skillsync.controller;
 
 import com.skillsync.skillsync.dto.common.ApiResponse;
 import com.skillsync.skillsync.entity.CreditMission;
+import com.skillsync.skillsync.enums.LogLevel;
 import com.skillsync.skillsync.enums.MissionStatus;
 import com.skillsync.skillsync.repository.CreditMissionRepository;
 import com.skillsync.skillsync.repository.UserMissionRepository;
+import com.skillsync.skillsync.service.SystemLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +22,7 @@ public class AdminMissionController {
 
     private final CreditMissionRepository missionRepository;
     private final UserMissionRepository userMissionRepository;
+    private final SystemLogService systemLogService;
 
     /** GET /api/admin/missions — danh sách missions kèm số lượng completions */
     @GetMapping
@@ -62,6 +65,10 @@ public class AdminMissionController {
                 ? MissionStatus.INACTIVE
                 : MissionStatus.ACTIVE);
         missionRepository.save(mission);
+        systemLogService.logSystemEvent(
+                "Cap nhat trang thai nhiem vu: " + mission.getTitle() + " -> " + mission.getStatus(),
+                LogLevel.WARNING
+        );
 
         Map<String, Object> res = new LinkedHashMap<>();
         res.put("id", mission.getId());

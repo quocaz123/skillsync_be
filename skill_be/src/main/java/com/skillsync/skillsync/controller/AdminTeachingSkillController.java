@@ -3,7 +3,9 @@ package com.skillsync.skillsync.controller;
 import com.skillsync.skillsync.dto.request.skill.VerifyTeachingSkillRequest;
 import com.skillsync.skillsync.dto.response.skill.AdminTeachingSkillResponse;
 import com.skillsync.skillsync.enums.VerificationStatus;
+import com.skillsync.skillsync.enums.LogLevel;
 import com.skillsync.skillsync.service.AdminTeachingSkillService;
+import com.skillsync.skillsync.service.SystemLogService;
 import lombok.RequiredArgsConstructor;
 import com.skillsync.skillsync.dto.common.ApiResponse;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +19,7 @@ import java.util.UUID;
 public class AdminTeachingSkillController {
 
     private final AdminTeachingSkillService service;
+    private final SystemLogService systemLogService;
 
     /**
      * GET /api/admin/teaching-skills?status=PENDING
@@ -38,6 +41,13 @@ public class AdminTeachingSkillController {
             @PathVariable UUID id,
             @RequestBody VerifyTeachingSkillRequest request
     ) {
-        return ApiResponse.success(service.verify(id, request));
+        AdminTeachingSkillResponse response = service.verify(id, request);
+        systemLogService.logSystemEvent(
+                "Duyet ky nang mentor: " + request.getAction()
+                        + " | user=" + response.getUserEmail()
+                        + " | skill=" + response.getSkillName(),
+                LogLevel.INFO
+        );
+        return ApiResponse.success(response);
     }
 }

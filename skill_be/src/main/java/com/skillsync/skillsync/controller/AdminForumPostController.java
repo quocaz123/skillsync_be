@@ -4,7 +4,9 @@ import com.skillsync.skillsync.dto.common.ApiResponse;
 import com.skillsync.skillsync.dto.request.forum.VerifyForumPostRequest;
 import com.skillsync.skillsync.dto.response.forum.AdminForumPostResponse;
 import com.skillsync.skillsync.enums.ForumPostStatus;
+import com.skillsync.skillsync.enums.LogLevel;
 import com.skillsync.skillsync.service.ForumPostService;
+import com.skillsync.skillsync.service.SystemLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -25,6 +27,7 @@ import java.util.UUID;
 public class AdminForumPostController {
 
     private final ForumPostService postService;
+    private final SystemLogService systemLogService;
 
     @GetMapping
     public ApiResponse<List<AdminForumPostResponse>> getAll(
@@ -38,6 +41,13 @@ public class AdminForumPostController {
             @PathVariable UUID id,
             @RequestBody VerifyForumPostRequest request
     ) {
-        return ApiResponse.success(postService.verifyPost(id, request));
+        AdminForumPostResponse response = postService.verifyPost(id, request);
+        systemLogService.logSystemEvent(
+                "Duyet bai viet cong dong: " + request.getAction()
+                        + " | postId=" + response.getId()
+                        + " | title=" + response.getTitle(),
+                LogLevel.INFO
+        );
+        return ApiResponse.success(response);
     }
 }

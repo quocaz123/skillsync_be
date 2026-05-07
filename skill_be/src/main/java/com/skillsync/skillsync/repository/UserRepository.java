@@ -15,6 +15,8 @@ import java.util.UUID;
 public interface UserRepository extends JpaRepository<User, UUID> {
     boolean existsByEmail(String email);
     Optional<User> findByEmail(String email);
+    long countByRole(com.skillsync.skillsync.enums.Role role);
+    long countByStatus(com.skillsync.skillsync.enums.UserStatus status);
 
     /** Tìm user theo tên hoặc email — dùng cho @mention dropdown */
     @Query("SELECT u FROM User u WHERE " +
@@ -22,4 +24,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
            "LOWER(u.email) LIKE LOWER(CONCAT('%', :q, '%')) " +
            "ORDER BY u.fullName ASC")
     List<User> searchForMention(@Param("q") String q, Pageable pageable);
+
+    @Query("SELECT u FROM User u WHERE " +
+           "(:search IS NULL OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')))")
+    org.springframework.data.domain.Page<User> searchAllForAdmin(@Param("search") String search, Pageable pageable);
 }
