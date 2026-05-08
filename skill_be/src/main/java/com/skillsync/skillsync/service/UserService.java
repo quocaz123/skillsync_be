@@ -43,10 +43,10 @@ public class UserService {
     private UserResponse buildFullResponse(User user) {
         var id = user.getId();
 
-        long teachingSessions  = sessionRepository.countByTeacherId(id);
-        long learningSessions  = sessionRepository.countByLearnerId(id);
-        Double avgRating       = reviewRepository.findAverageRatingByRevieweeId(id);
-        long totalReviews      = reviewRepository.countByRevieweeId(id);
+        long teachingSessions = sessionRepository.countByTeacherId(id);
+        long learningSessions = sessionRepository.countByLearnerId(id);
+        Double avgRating = reviewRepository.findAverageRatingByRevieweeId(id);
+        long totalReviews = reviewRepository.countByRevieweeId(id);
         Long totalTeachingSkills = (long) userTeachingSkillRepository.findByUserIdOrderByCreatedAtDesc(id).size();
 
         Integer pendingLearner = sessionRepository.getLearnerPendingCredits(id);
@@ -90,10 +90,12 @@ public class UserService {
 
     /**
      * Tìm user cho @mention dropdown.
-     * Chỉ trả về id, fullName, email (rút gọn), avatarUrl — không lộ dữ liệu nhạy cảm.
+     * Chỉ trả về id, fullName, email (rút gọn), avatarUrl — không lộ dữ liệu nhạy
+     * cảm.
      */
     public List<MentionUserResponse> searchUsersForMention(String q, int size) {
-        if (q == null || q.trim().length() < 2) return List.of();
+        if (q == null || q.trim().length() < 2)
+            return List.of();
         int safeSize = Math.min(Math.max(size, 1), 20);
         return userRepository.searchForMention(q.trim(), PageRequest.of(0, safeSize))
                 .stream()
@@ -108,11 +110,13 @@ public class UserService {
 
     /** Rút gọn email: abc@gmail.com → a**@gmail.com */
     private String maskEmail(String email) {
-        if (email == null || !email.contains("@")) return email;
+        if (email == null || !email.contains("@"))
+            return email;
         String[] parts = email.split("@", 2);
         String local = parts[0];
         String domain = parts[1];
-        if (local.length() <= 1) return email;
+        if (local.length() <= 1)
+            return email;
         return local.charAt(0) + "**@" + domain;
     }
 
@@ -141,7 +145,8 @@ public class UserService {
 
     private String toVietnameseDescription(com.skillsync.skillsync.entity.CreditTransaction tx) {
         String fallback = tx.getDescription() != null ? tx.getDescription() : "Giao dịch credits";
-        if (tx.getTransactionType() == null) return fallback;
+        if (tx.getTransactionType() == null)
+            return fallback;
 
         return switch (tx.getTransactionType()) {
             case SPEND_SESSION -> "Thanh toán buổi học";
@@ -189,14 +194,16 @@ public class UserService {
 
     // ─── Admin API ───────────────────────────────────────────────────────────
 
-    public com.skillsync.skillsync.dto.common.PageResponse<com.skillsync.skillsync.dto.response.admin.AdminUserResponse> getAllUsersForAdmin(String search, int page, int size) {
+    public com.skillsync.skillsync.dto.common.PageResponse<com.skillsync.skillsync.dto.response.admin.AdminUserResponse> getAllUsersForAdmin(
+            String search, int page, int size) {
         String searchQuery = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
         org.springframework.data.domain.Page<User> usersPage = userRepository.searchAllForAdmin(
                 searchQuery,
-                org.springframework.data.domain.PageRequest.of(page, size, org.springframework.data.domain.Sort.by("createdAt").descending()));
-        
-        org.springframework.data.domain.Page<com.skillsync.skillsync.dto.response.admin.AdminUserResponse> dtoPage = usersPage.map(u -> 
-                com.skillsync.skillsync.dto.response.admin.AdminUserResponse.builder()
+                org.springframework.data.domain.PageRequest.of(page, size,
+                        org.springframework.data.domain.Sort.by("createdAt").descending()));
+
+        org.springframework.data.domain.Page<com.skillsync.skillsync.dto.response.admin.AdminUserResponse> dtoPage = usersPage
+                .map(u -> com.skillsync.skillsync.dto.response.admin.AdminUserResponse.builder()
                         .id(u.getId())
                         .email(u.getEmail())
                         .fullName(u.getFullName())
@@ -205,8 +212,7 @@ public class UserService {
                         .role(u.getRole())
                         .creditsBalance(u.getCreditsBalance())
                         .createdAt(u.getCreatedAt())
-                        .build()
-        );
+                        .build());
         return com.skillsync.skillsync.dto.common.PageResponse.from(dtoPage);
     }
 

@@ -143,7 +143,6 @@ public class LearningPathService {
                         .lessons(new ArrayList<>())
                         .build();
 
-
                 if (modReq.getLessons() != null) {
                     int lessonOrder = 0;
                     for (LearningPathLessonRequest lesReq : modReq.getLessons()) {
@@ -283,7 +282,8 @@ public class LearningPathService {
     }
 
     /**
-     * Đọc check-constraint status từ PostgreSQL để chọn giá trị hợp lệ theo DB hiện tại.
+     * Đọc check-constraint status từ PostgreSQL để chọn giá trị hợp lệ theo DB hiện
+     * tại.
      * Tránh hard-code khiến lỗi khi schema của môi trường khác nhau.
      */
     private String resolveEnrollmentStatus() {
@@ -296,7 +296,8 @@ public class LearningPathService {
                       AND c.conname = 'learning_path_enrollments_status_check'
                     """).getSingleResult();
 
-            if (defObj == null) return "ENROLLED";
+            if (defObj == null)
+                return "ENROLLED";
             String def = defObj.toString();
 
             Matcher m = Pattern.compile("'([^']+)'").matcher(def);
@@ -304,11 +305,13 @@ public class LearningPathService {
             while (m.find()) {
                 allowed.add(m.group(1));
             }
-            if (allowed.isEmpty()) return "ENROLLED";
+            if (allowed.isEmpty())
+                return "ENROLLED";
 
             List<String> preferred = List.of("ENROLLED", "ACTIVE", "IN_PROGRESS", "ONGOING", "PENDING");
             for (String candidate : preferred) {
-                if (allowed.contains(candidate)) return candidate;
+                if (allowed.contains(candidate))
+                    return candidate;
             }
             return allowed.get(0);
         } catch (Exception ignored) {
@@ -360,8 +363,8 @@ public class LearningPathService {
     // ─── Mappers ────────────────────────────────────────────
 
     private LearningPathResponse toResponse(LearningPath lp) {
-        List<LearningPathModuleResponse> moduleDtos = lp.getModules() == null ? List.of() :
-                lp.getModules().stream().map(this::toModuleResponse).toList();
+        List<LearningPathModuleResponse> moduleDtos = lp.getModules() == null ? List.of()
+                : lp.getModules().stream().map(this::toModuleResponse).toList();
 
         int lessonCount = moduleDtos.stream().mapToInt(m -> m.getLessonCount() != null ? m.getLessonCount() : 0).sum();
 
@@ -399,8 +402,8 @@ public class LearningPathService {
     /** Summary (no modules list) for Explore page */
     private LearningPathResponse toResponseSummary(LearningPath lp) {
         int moduleCount = lp.getModules() != null ? lp.getModules().size() : 0;
-        int lessonCount = lp.getModules() == null ? 0 :
-                lp.getModules().stream().mapToInt(m -> m.getLessons() != null ? m.getLessons().size() : 0).sum();
+        int lessonCount = lp.getModules() == null ? 0
+                : lp.getModules().stream().mapToInt(m -> m.getLessons() != null ? m.getLessons().size() : 0).sum();
 
         return LearningPathResponse.builder()
                 .id(lp.getId().toString())
@@ -428,8 +431,8 @@ public class LearningPathService {
     }
 
     private LearningPathModuleResponse toModuleResponse(LearningPathModule m) {
-        List<LearningPathLessonResponse> lessons = m.getLessons() == null ? List.of() :
-                m.getLessons().stream().map(this::toLessonResponse).toList();
+        List<LearningPathLessonResponse> lessons = m.getLessons() == null ? List.of()
+                : m.getLessons().stream().map(this::toLessonResponse).toList();
         return LearningPathModuleResponse.builder()
                 .id(m.getId().toString())
                 .title(m.getTitle())
