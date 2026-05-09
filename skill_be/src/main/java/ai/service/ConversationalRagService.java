@@ -24,7 +24,9 @@ import java.util.*;
 /**
  * Xử lý hội thoại AI với bộ nhớ phiên lưu trên Redis.
  *
- * <p>Luồng chính:
+ * <p>
+ * Luồng chính:
+ * 
  * <pre>
  * processMessage(sessionId, userMessage)
  *   ├─ AiSessionRepository.getOrCreate()           ← Redis GET
@@ -45,15 +47,14 @@ import java.util.*;
 public class ConversationalRagService {
 
     // ── Dependencies ───────────────────────────────────────────────────────
-    GroqChatService        groqChatService;
-    MentorSearchService    mentorSearchService;
-    ObjectMapper           objectMapper;
-    AiSessionRepository    sessionRepository;
-    MemoryPromptBuilder    promptBuilder;
-    SessionSummaryService  summaryService;
-    AiConfigHolder         configHolder;
+    GroqChatService groqChatService;
+    MentorSearchService mentorSearchService;
+    ObjectMapper objectMapper;
+    AiSessionRepository sessionRepository;
+    MemoryPromptBuilder promptBuilder;
+    SessionSummaryService summaryService;
+    AiConfigHolder configHolder;
 
-    // ── Constants ──────────────────────────────────────────────────────────
     static final long MIN_INTERVAL_BETWEEN_MESSAGES_MS = 2000L;
 
     // ── Public API ─────────────────────────────────────────────────────────
@@ -75,8 +76,7 @@ public class ConversationalRagService {
             return new ChatResponse(
                     "Bạn gửi hơi nhanh một chút. Chờ khoảng 2 giây rồi nhắn tiếp nhé!",
                     false,
-                    null
-            );
+                    null);
         }
         state.setLastRequestAt(now);
 
@@ -87,8 +87,7 @@ public class ConversationalRagService {
             // 4. Gọi LLM
             String aiRawResponse = groqChatService.generateWithHistory(
                     SystemPromptTemplate.MENTOR_MATCHER_PROMPT,
-                    turns
-            );
+                    turns);
 
             // 5. Ghi lượt hội thoại vào state
             state.getRecentTurns().add(ChatTurn.user(userMessage));
@@ -101,8 +100,7 @@ public class ConversationalRagService {
                         sessionId, triggerTurns);
                 String newSummary = summaryService.refreshSummary(
                         state.getSummary(),
-                        state.getRecentTurns()
-                );
+                        state.getRecentTurns());
                 state.setSummary(newSummary);
                 state.setRecentTurns(new ArrayList<>()); // reset sau khi tóm tắt
             }
@@ -122,8 +120,7 @@ public class ConversationalRagService {
             return new ChatResponse(
                     "Xin lỗi, mình gặp sự cố kỹ thuật. Bạn thử lại nhé!",
                     false,
-                    null
-            );
+                    null);
         }
     }
 
@@ -139,12 +136,13 @@ public class ConversationalRagService {
 
             Map<String, Object> extracted = objectMapper.readValue(
                     jsonPart,
-                    new TypeReference<>() {}
-            );
+                    new TypeReference<>() {
+                    });
 
             @SuppressWarnings("unchecked")
             List<Object> rawSkills = (List<Object>) extracted.get("skills");
-            if (rawSkills == null) rawSkills = List.of();
+            if (rawSkills == null)
+                rawSkills = List.of();
 
             List<String> skills = rawSkills.stream()
                     .filter(Objects::nonNull)
@@ -154,19 +152,17 @@ public class ConversationalRagService {
                     .distinct()
                     .toList();
 
-            String level   = Objects.toString(extracted.getOrDefault("level",   "BEGINNER"), "BEGINNER");
-            String goal    = Objects.toString(extracted.getOrDefault("goal",    ""),          "");
+            String level = Objects.toString(extracted.getOrDefault("level", "BEGINNER"), "BEGINNER");
+            String goal = Objects.toString(extracted.getOrDefault("goal", ""), "");
             String summary = Objects.toString(
                     extracted.getOrDefault("summary", "Mình đã hiểu yêu cầu của bạn! Đây là các mentor phù hợp:"),
-                    "Mình đã hiểu yêu cầu của bạn! Đây là các mentor phù hợp:"
-            );
+                    "Mình đã hiểu yêu cầu của bạn! Đây là các mentor phù hợp:");
 
             if (skills.isEmpty()) {
                 return new ChatResponse(
                         "Mình chưa trích xuất được kỹ năng từ hội thoại. Bạn mô tả thêm kỹ năng muốn học nhé!",
                         false,
-                        null
-                );
+                        null);
             }
 
             List<MentorMatchDto> mentors = mentorSearchService.findMentors(skills, level);
@@ -176,8 +172,7 @@ public class ConversationalRagService {
                 return new ChatResponse(
                         "Hiện tại SkillSync chưa có Mentor phù hợp với yêu cầu của bạn. Bạn thử mô tả lại hướng học khác hoặc quay lại sau nhé!",
                         false,
-                        null
-                );
+                        null);
             }
 
             List<MentorMatchDto> finalMentors;
@@ -201,8 +196,7 @@ public class ConversationalRagService {
             return new ChatResponse(
                     "Mình hiểu bạn muốn học IT nhưng gặp lỗi khi tìm kiếm. Thử lại nhé!",
                     false,
-                    null
-            );
+                    null);
         }
     }
 
@@ -212,18 +206,17 @@ public class ConversationalRagService {
             List<MentorMatchDto> mentors,
             List<String> skills,
             String level,
-            String goal
-    ) {
+            String goal) {
         String enrichPrompt = String.format("""
-                        Dựa vào yêu cầu học %s, level %s, mục tiêu "%s",
-                        hãy viết 1 câu lý do ngắn gọn cho từng mentor.
-                        Tối đa 20 từ mỗi reason.
-                        Trả về CHÍNH XÁC JSON array, không thêm markdown:
-                        [{"mentorId":"...","reason":"..."}]
+                Dựa vào yêu cầu học %s, level %s, mục tiêu "%s",
+                hãy viết 1 câu lý do ngắn gọn cho từng mentor.
+                Tối đa 20 từ mỗi reason.
+                Trả về CHÍNH XÁC JSON array, không thêm markdown:
+                [{"mentorId":"...","reason":"..."}]
 
-                        Danh sách mentor:
-                        %s
-                        """,
+                Danh sách mentor:
+                %s
+                """,
                 String.join(", ", skills),
                 level,
                 goal == null ? "" : goal,
@@ -235,16 +228,15 @@ public class ConversationalRagService {
                                 safe(m.skillName()),
                                 safe(m.level()),
                                 safe(m.experienceDesc()),
-                                safe(m.teachingStyle())
-                        ))
-                        .reduce("", (a, b) -> a + "\n" + b)
-        );
+                                safe(m.teachingStyle())))
+                        .reduce("", (a, b) -> a + "\n" + b));
 
         try {
             String reasonsJson = groqChatService.generateUserMessage(enrichPrompt);
             String cleaned = reasonsJson.replace("```json", "").replace("```", "").trim();
 
-            List<Map<String, Object>> reasons = objectMapper.readValue(cleaned, new TypeReference<>() {});
+            List<Map<String, Object>> reasons = objectMapper.readValue(cleaned, new TypeReference<>() {
+            });
 
             Map<String, String> reasonMap = new HashMap<>();
             for (Map<String, Object> row : reasons) {
@@ -268,9 +260,7 @@ public class ConversationalRagService {
                             m.rating(),
                             reasonMap.getOrDefault(
                                     m.mentorId().toString(),
-                                    buildFallbackReason(m, skills, level, goal)
-                            )
-                    ))
+                                    buildFallbackReason(m, skills, level, goal))))
                     .toList();
 
         } catch (Exception e) {
@@ -283,8 +273,7 @@ public class ConversationalRagService {
             List<MentorMatchDto> mentors,
             List<String> skills,
             String level,
-            String goal
-    ) {
+            String goal) {
         return mentors.stream()
                 .map(m -> new MentorMatchDto(
                         m.mentorId(),
@@ -296,8 +285,7 @@ public class ConversationalRagService {
                         m.teachingStyle(),
                         m.creditsPerHour(),
                         m.rating(),
-                        buildFallbackReason(m, skills, level, goal)
-                ))
+                        buildFallbackReason(m, skills, level, goal)))
                 .toList();
     }
 
