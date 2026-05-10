@@ -2,6 +2,7 @@ package com.skillsync.skillsync.service;
 
 import com.skillsync.skillsync.dto.response.LeaderboardResponse;
 import com.skillsync.skillsync.entity.User;
+import com.skillsync.skillsync.enums.Role;
 import com.skillsync.skillsync.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -78,7 +79,7 @@ public class LeaderboardService {
             Double score = tuple.getScore();
             User user = userMap.get(userId);
 
-            if (user != null) {
+            if (user != null && user.getRole() != Role.ADMIN) {
                 response.add(LeaderboardResponse.builder()
                         .userId(userIdStr)
                         .name(user.getFullName())

@@ -652,8 +652,8 @@ public class SessionService {
                 .build();
         transactionRepository.save(tx);
 
-        // Leaderboard: Mentor nhận 1 điểm cho mỗi credit kiếm được
-        leaderboardService.incrementScore(teacher.getId().toString(), (double) session.getCreditCost());
+        // Leaderboard: Mentor nhận 1.2 điểm cho mỗi credit kiếm được
+        leaderboardService.incrementScore(teacher.getId().toString(), session.getCreditCost() * 1.2);
 
         notificationService.createAndSend(NotificationCreateRequest.builder()
                 .userId(teacher.getId())

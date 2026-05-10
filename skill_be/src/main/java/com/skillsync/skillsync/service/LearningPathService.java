@@ -263,12 +263,9 @@ public class LearningPathService {
                         .build();
                 creditTransactionRepository.save(earnTx);
 
-                // Leaderboard: Mentor nhận 1 điểm cho mỗi credit kiếm được
-                leaderboardService.incrementScore(teacher.getId().toString(), (double) cost);
+                // Leaderboard: Mentor nhận 1.2 điểm cho mỗi credit kiếm được từ việc bán lộ trình
+                leaderboardService.incrementScore(teacher.getId().toString(), cost * 1.2);
             }
-
-            // Leaderboard: Học viên nhận 0.5 điểm cho mỗi credit chi tiêu
-            leaderboardService.incrementScore(student.getId().toString(), cost * 0.5);
         }
 
         LearningPathEnrollment enrollment = LearningPathEnrollment.builder()
@@ -362,6 +359,17 @@ public class LearningPathService {
         lp.setTotalReviews(newTotalReviews);
         lp.setRating(Math.round(newRating * 10.0) / 10.0); // round 1 decimal
         learningPathRepository.save(lp);
+
+        // Leaderboard: Cộng/trừ điểm cống hiến cho Mentor dựa trên số sao review
+        double reviewPoints = 0;
+        int rating = req.getRating();
+        if (rating == 5) reviewPoints = 50;
+        else if (rating == 4) reviewPoints = 20;
+        else if (rating <= 2) reviewPoints = -20;
+
+        if (reviewPoints != 0 && lp.getTeacher() != null) {
+            leaderboardService.incrementScore(lp.getTeacher().getId().toString(), reviewPoints);
+        }
 
         return LearningPathReviewResponse.builder()
                 .id(review.getId())
