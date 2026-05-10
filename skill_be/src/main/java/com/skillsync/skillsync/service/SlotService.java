@@ -134,7 +134,7 @@ public class SlotService {
                         .teachingSkill(skill)
                         .slotDate(entry.getDate())
                         .slotTime(entry.getTime())
-                        .slotEndTime(entry.getEndTime())
+                        .slotEndTime(end) // Sử dụng biến 'end' đã được normalize ở trên
                         .creditCost(entry.getCreditCost())
                         .status(SlotStatus.OPEN)
                         .build());

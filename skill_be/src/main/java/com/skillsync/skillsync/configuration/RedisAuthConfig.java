@@ -44,4 +44,16 @@ public class RedisAuthConfig {
         template.afterPropertiesSet();
         return template;
     }
+
+    @Bean
+    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
+        RedisTemplate<String, Object> template = new RedisTemplate<>();
+        template.setConnectionFactory(connectionFactory);
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setHashKeySerializer(new StringRedisSerializer());
+        template.setValueSerializer(new Jackson2JsonRedisSerializer<>(Object.class));
+        template.setHashValueSerializer(new Jackson2JsonRedisSerializer<>(Object.class));
+        template.afterPropertiesSet();
+        return template;
+    }
 }

@@ -4,11 +4,13 @@ import com.skillsync.skillsync.dto.common.ApiResponse;
 import com.skillsync.skillsync.dto.request.learningpath.LearningPathCreateRequest;
 import com.skillsync.skillsync.dto.response.learningpath.LearningPathEnrollResponse;
 import com.skillsync.skillsync.dto.response.learningpath.LearningPathResponse;
+import com.skillsync.skillsync.dto.response.learningpath.LearningPathReviewResponse;
 import com.skillsync.skillsync.service.LearningPathService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -82,6 +84,18 @@ public class LearningPathController {
             @PathVariable UUID id,
             @RequestBody @jakarta.validation.Valid com.skillsync.skillsync.dto.request.learningpath.LearningPathReviewRequest request) {
         return ApiResponse.success(learningPathService.addReview(id, request));
+    }
+
+    /** Lấy danh sách reviews của lộ trình */
+    @GetMapping("/{id}/reviews")
+    public ApiResponse<List<LearningPathReviewResponse>> getReviews(@PathVariable UUID id) {
+        return ApiResponse.success(learningPathService.getReviews(id));
+    }
+
+    /** Kiểm tra user hiện tại đã review chưa */
+    @GetMapping("/{id}/reviews/me/check")
+    public ApiResponse<Map<String, Boolean>> checkMyReview(@PathVariable UUID id) {
+        return ApiResponse.success(Map.of("hasReviewed", learningPathService.hasCurrentUserReviewed(id)));
     }
 
     /** Xóa lộ trình (Mentor / Admin) */

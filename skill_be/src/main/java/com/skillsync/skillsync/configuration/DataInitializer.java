@@ -2,36 +2,20 @@ package com.skillsync.skillsync.configuration;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.skillsync.skillsync.entity.Skill;
-import com.skillsync.skillsync.entity.User;
-import com.skillsync.skillsync.entity.ForumCategory;
-import com.skillsync.skillsync.entity.ForumPost;
-import com.skillsync.skillsync.enums.Role;
-import com.skillsync.skillsync.enums.ForumPostStatus;
-import com.skillsync.skillsync.enums.SkillCategory;
-
-import com.skillsync.skillsync.entity.CreditMission;
-import com.skillsync.skillsync.enums.MissionType;
+import com.skillsync.skillsync.entity.*;
+import com.skillsync.skillsync.enums.*;
 import com.skillsync.skillsync.repository.*;
-import org.springframework.jdbc.core.JdbcTemplate;
-
-import com.skillsync.skillsync.entity.UserTeachingSkill;
-import com.skillsync.skillsync.enums.VerificationStatus;
-import com.skillsync.skillsync.enums.SkillLevel;
+import com.skillsync.skillsync.service.LeaderboardService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.io.InputStream;
-
-import java.util.List;
-import java.util.Map;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Random;
+import java.util.*;
 
 @Component
 @RequiredArgsConstructor
@@ -45,41 +29,41 @@ public class DataInitializer implements CommandLineRunner {
     private final ForumCategoryRepository forumCategoryRepository;
     private final ForumPostRepository forumPostRepository;
     private final UserTeachingSkillRepository userTeachingSkillRepository;
+    private final LearningPathRepository learningPathRepository;
+    private final LearningPathEnrollmentRepository learningPathEnrollmentRepository;
+    private final LeaderboardService leaderboardService;
     private final JdbcTemplate jdbcTemplate;
-
     private final ObjectMapper objectMapper;
 
     @Override
     public void run(String... args) {
-        try {
-            jdbcTemplate.execute("ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check");
-            log.info("✅ Dropped notifications_type_check constraint if it existed");
-        } catch (Exception e) {
-            log.warn("Could not drop constraint: {}", e.getMessage());
-        }
-
+        
+        // 1. Users
         seedUser("admin@skillsync.com", "Admin@123", Role.ADMIN, "System Admin");
         seedUser("user@skillsync.com",  "User@123",  Role.USER,  "Standard User");
+        seedSampleUsers();
 
-        // Danh sách 10 user mẫu
-        seedUser("nguyenvana@gmail.com", "User@123", Role.USER, "Nguyễn Văn An");
-        seedUser("tranthib@gmail.com", "User@123", Role.USER, "Trần Thị Bình");
-        seedUser("lehoangc@gmail.com", "User@123", Role.USER, "Lê Hoàng Cường");
-        seedUser("phamduyd@gmail.com", "User@123", Role.USER, "Phạm Duy Đạt");
-        seedUser("vuongthie@gmail.com", "User@123", Role.USER, "Vương Thị Yến");
-        seedUser("dangquangf@gmail.com", "User@123", Role.USER, "Đặng Quang Phúc");
-        seedUser("buitrangg@gmail.com", "User@123", Role.USER, "Bùi Trang Giang");
-        seedUser("ngominhh@gmail.com", "User@123", Role.USER, "Ngô Minh Hiếu");
-        seedUser("lythanhk@gmail.com", "User@123", Role.USER, "Lý Thanh Kiên");
-        seedUser("hotuanl@gmail.com", "User@123", Role.USER, "Hồ Tuấn Lộc");
+        // 2. Base Data
         seedSkills();
-        seedTeachingSkills(); // Thêm dữ liệu test AI
+        seedTeachingSkills();
         seedForumCategories();
         backfillForumPostStatuses();
         seedMissions();
 
+        // 3. Complex Data
+        seedSystemLearningPaths();
+        seedLeaderboard();
     }
 
+
+    private void seedSampleUsers() {
+        try (InputStream is = new ClassPathResource("seeds/sample_users.json").getInputStream()) {
+            List<Map<String, String>> userDefs = objectMapper.readValue(is, new TypeReference<>() {});
+            userDefs.forEach(def -> seedUser(def.get("email"), "User@123", Role.USER, def.get("fullName")));
+        } catch (Exception e) {
+            log.error("Failed to seed sample users: {}", e.getMessage());
+        }
+    }
 
     private void seedUser(String email, String rawPassword, Role role, String fullName) {
         if (userRepository.findByEmail(email).isEmpty()) {
@@ -91,206 +75,203 @@ public class DataInitializer implements CommandLineRunner {
                     .isEmailVerified(true)
                     .build();
             userRepository.save(user);
-            log.info("✅ Seeded {} user: {}", role.name(), email);
-        } else {
-            log.info("⏩ {} user already exists: {}", role.name(), email);
+            log.info("Seeded {} user: {}", role.name(), email);
         }
     }
 
-    private void seedUser(String email, String rawPassword, Role role) {
-        seedUser(email, rawPassword, role, null);
-    }
-
     private static String deriveFullNameFromEmail(String email) {
-        if (email == null || email.isBlank()) return "User";
+        if (email == null || !email.contains("@")) return "User";
         String local = email.split("@")[0];
-        if (local.isBlank()) return "User";
         return Character.toUpperCase(local.charAt(0)) + local.substring(1);
     }
 
-    // ─── Skills ───────────────────────────────────────────────────────────────
-
     private void seedSkills() {
-        try {
-            ClassPathResource resource = new ClassPathResource("seeds/skills.json");
-            InputStream inputStream = resource.getInputStream();
-
-            List<Map<String, String>> skillDefs =
-                    objectMapper.readValue(inputStream, new TypeReference<>() {});
-
+        try (InputStream is = new ClassPathResource("seeds/skills.json").getInputStream()) {
+            List<Map<String, String>> skillDefs = objectMapper.readValue(is, new TypeReference<>() {});
             int seeded = 0;
             for (Map<String, String> def : skillDefs) {
-                String name = def.get("name");
-                if (!skillRepository.existsByName(name)) {
+                if (!skillRepository.existsByName(def.get("name"))) {
                     skillRepository.save(Skill.builder()
-                            .name(name)
+                            .name(def.get("name"))
                             .category(SkillCategory.valueOf(def.get("category")))
                             .icon(def.get("icon"))
                             .build());
                     seeded++;
                 }
             }
-
-            if (seeded > 0) log.info("Seeded {} skills from skills.json", seeded);
-            else            log.info("Skills already seeded");
-
+            if (seeded > 0) log.info("Seeded {} skills", seeded);
         } catch (Exception e) {
-            log.error("Failed to seed skills from seeds/skills.json: {}", e.getMessage());
+            log.error("Failed to seed skills: {}", e.getMessage());
         }
     }
 
-    // ─── Teaching Skills (AI Testing) ────────────────────────────────────────
-
     private void seedTeachingSkills() {
-        if (userTeachingSkillRepository.count() > 0) {
-            log.info("⏩ Teaching skills already seeded");
-            return;
-        }
-
-        List<User> users = userRepository.findAll().stream()
-                .filter(u -> u.getRole() == Role.USER)
-                .toList();
+        if (userTeachingSkillRepository.count() > 0) return;
+        List<User> users = userRepository.findAll().stream().filter(u -> u.getRole() == Role.USER).toList();
         List<Skill> allSkills = skillRepository.findAll();
-
         if (allSkills.isEmpty() || users.isEmpty()) return;
 
         Random random = new Random();
         int seededCount = 0;
-
         for (User user : users) {
-            // Shuffle skills để chọn ngẫu nhiên
             List<Skill> shuffledSkills = new ArrayList<>(allSkills);
             Collections.shuffle(shuffledSkills);
-
-            // Mỗi user dạy ngẫu nhiên 1 đến 3 kỹ năng
             int skillsToTeach = 1 + random.nextInt(3);
-
             for (int i = 0; i < skillsToTeach; i++) {
                 Skill skill = shuffledSkills.get(i);
-                
-                // Mức độ ngẫu nhiên
-                SkillLevel level = SkillLevel.values()[random.nextInt(SkillLevel.values().length)];
-                
-                UserTeachingSkill uts = UserTeachingSkill.builder()
+                userTeachingSkillRepository.save(UserTeachingSkill.builder()
                         .user(user)
                         .skill(skill)
-                        .level(level)
-                        .experienceDesc("Tôi có " + (random.nextInt(10) + 1) + " năm kinh nghiệm làm việc và giảng dạy " + skill.getName() + " trong môi trường thực tế. Từng hỗ trợ nhiều học viên đạt được mục tiêu.")
-                        .outcomeDesc("Nắm vững nền tảng " + skill.getName() + "\nTự tin áp dụng vào thực tế\nHoàn thành project cá nhân")
-                        .teachingStyle("Dạy theo hướng thực hành (hands-on), tập trung vào dự án thực tế.")
-                        .creditsPerHour(10 + random.nextInt(41)) // 10 - 50 credits
-                        .verificationStatus(VerificationStatus.APPROVED) // Đã duyệt để hiện lên AI/Explore
-                        .hidden(false)
-                        .build();
-
-                userTeachingSkillRepository.save(uts);
+                        .level(SkillLevel.values()[random.nextInt(SkillLevel.values().length)])
+                        .experienceDesc("Kinh nghiệm thực tế giảng dạy " + skill.getName())
+                        .outcomeDesc("Nắm vững " + skill.getName())
+                        .teachingStyle("Thực hành hands-on")
+                        .creditsPerHour(10 + random.nextInt(41))
+                        .verificationStatus(VerificationStatus.APPROVED)
+                        .build());
                 seededCount++;
             }
         }
-        log.info("✅ Seeded {} teaching skills for AI testing", seededCount);
+        log.info("Seeded {} teaching skills", seededCount);
     }
 
-    // ─── Forum Categories ───────────────────────────────────────────────────
-
     private void seedForumCategories() {
-        List<ForumCategory> defaultCategories = List.of(
-                ForumCategory.builder().name("Mẹo học tập").description("Mẹo, công cụ và phương pháp học hiệu quả.").icon("").displayOrder(1).build(),
-                ForumCategory.builder().name("Gợi ý giáo viên").description("Đề xuất và tìm kiếm giáo viên phù hợp.").icon("").displayOrder(2).build(),
-                ForumCategory.builder().name("Tài nguyên học tập").description("Tài liệu, roadmap và nguồn học tập hữu ích.").icon("").displayOrder(3).build(),
-                ForumCategory.builder().name("Hỏi đáp").description("Đặt câu hỏi và thảo luận cùng cộng đồng.").icon("").displayOrder(4).build(),
-                ForumCategory.builder().name("Chia sẻ kinh nghiệm").description("Chia sẻ câu chuyện, kết quả và trải nghiệm học tập.").icon("").displayOrder(5).build(),
-                ForumCategory.builder().name("Thảo luận chung").description("Trao đổi, góp ý và thảo luận các chủ đề học tập.").icon("").displayOrder(6).build(),
-                ForumCategory.builder().name("Kinh nghiệm học tập").description("Chia sẻ phương pháp và cách học hiệu quả.").icon("").displayOrder(7).build(),
-                ForumCategory.builder().name("Tài liệu tham khảo").description("Chia sẻ tài liệu, link và nguồn học thêm hữu ích.").icon("").displayOrder(8).build()
-        );
-
-        List<ForumCategory> existingCategories = forumCategoryRepository.findAllByOrderByDisplayOrderAsc();
-        int updated = 0;
-
-        for (ForumCategory defaultCategory : defaultCategories) {
-            ForumCategory target = existingCategories.stream()
-                    .filter(category -> category.getDisplayOrder() != null
-                            && category.getDisplayOrder().equals(defaultCategory.getDisplayOrder()))
-                    .findFirst()
-                    .orElseGet(() -> forumCategoryRepository.findByNameIgnoreCase(defaultCategory.getName()).orElse(null));
-
-            if (target == null) {
-                forumCategoryRepository.save(defaultCategory);
-                updated++;
-                continue;
+        try (InputStream is = new ClassPathResource("seeds/forum_categories.json").getInputStream()) {
+            List<ForumCategory> categories = objectMapper.readValue(is, new TypeReference<>() {});
+            int updated = 0;
+            for (ForumCategory cat : categories) {
+                if (forumCategoryRepository.findByNameIgnoreCase(cat.getName()).isEmpty()) {
+                    forumCategoryRepository.save(cat);
+                    updated++;
+                }
             }
-
-            boolean changed = false;
-            if (!defaultCategory.getName().equals(target.getName())) {
-                target.setName(defaultCategory.getName());
-                changed = true;
-            }
-            if (!defaultCategory.getDescription().equals(target.getDescription())) {
-                target.setDescription(defaultCategory.getDescription());
-                changed = true;
-            }
-            if (!defaultCategory.getIcon().equals(target.getIcon())) {
-                target.setIcon(defaultCategory.getIcon());
-                changed = true;
-            }
-            if (!defaultCategory.getDisplayOrder().equals(target.getDisplayOrder())) {
-                target.setDisplayOrder(defaultCategory.getDisplayOrder());
-                changed = true;
-            }
-
-            if (changed) {
-                forumCategoryRepository.save(target);
-                updated++;
-            }
-        }
-
-        if (updated > 0) {
-            log.info("✅ Synchronized {} forum categories", updated);
-        } else {
-            log.info("⏩ Forum categories already synchronized");
+            if (updated > 0) log.info("Seeded {} forum categories", updated);
+        } catch (Exception e) {
+            log.error("Failed to seed forum categories: {}", e.getMessage());
         }
     }
 
     private void backfillForumPostStatuses() {
-        try {
-            List<ForumPost> posts = forumPostRepository.findAll();
-            long updated = 0;
-            for (ForumPost post : posts) {
-                if (post.getStatus() == null) {
-                    post.setStatus(ForumPostStatus.APPROVED);
-                    updated++;
+        List<ForumPost> posts = forumPostRepository.findAll().stream().filter(p -> p.getStatus() == null).toList();
+        if (!posts.isEmpty()) {
+            posts.forEach(p -> p.setStatus(ForumPostStatus.APPROVED));
+            forumPostRepository.saveAll(posts);
+            log.info("Backfilled {} forum posts", posts.size());
+        }
+    }
+
+    private void seedMissions() {
+        if (creditMissionRepository.count() > 0) return;
+        try (InputStream is = new ClassPathResource("seeds/missions.json").getInputStream()) {
+            List<CreditMission> missions = objectMapper.readValue(is, new TypeReference<>() {});
+            creditMissionRepository.saveAll(missions);
+            log.info("Seeded {} default missions", missions.size());
+        } catch (Exception e) {
+            log.error("Failed to seed missions: {}", e.getMessage());
+        }
+    }
+
+    private void seedSystemLearningPaths() {
+        final String prefix = "SYS_SEED_";
+        if (learningPathRepository.findAll().stream().anyMatch(lp -> lp.getTitle().startsWith(prefix))) return;
+
+        User admin = userRepository.findByEmail("admin@skillsync.com").orElse(null);
+        if (admin == null) return;
+
+        try (InputStream is = new ClassPathResource("seeds/learning_paths.json").getInputStream()) {
+            List<Map<String, Object>> pathDefs = objectMapper.readValue(is, new TypeReference<>() {});
+            for (Map<String, Object> def : pathDefs) {
+                LearningPath lp = LearningPath.builder()
+                        .teacher(admin)
+                        .title((String) def.get("title"))
+                        .shortDescription((String) def.get("shortDescription"))
+                        .description((String) def.get("shortDescription"))
+                        .category(SkillCategory.valueOf((String) def.get("category")))
+                        .level(SkillLevel.valueOf((String) def.get("level")))
+                        .duration("6 tuần")
+                        .emoji("📚")
+                        .thumbnailUrl((String) def.get("thumbUrl"))
+                        .totalCredits((Integer) def.get("totalCredits"))
+                        .maxStudents(999)
+                        .registrationType(RegistrationType.AUTO)
+                        .status(LearningPathStatus.APPROVED)
+                        .modules(new ArrayList<>())
+                        .build();
+
+                LearningPath saved = learningPathRepository.save(lp);
+                List<Map<String, Object>> moduleDefs = (List<Map<String, Object>>) def.get("modules");
+                
+                for (int mi = 0; mi < moduleDefs.size(); mi++) {
+                    Map<String, Object> mDef = moduleDefs.get(mi);
+                    LearningPathModule module = LearningPathModule.builder()
+                            .learningPath(saved)
+                            .title((String) mDef.get("title"))
+                            .orderIndex(mi)
+                            .enableSupport((Boolean) mDef.get("enableSupport"))
+                            .hasQuiz((Boolean) mDef.get("hasQuiz"))
+                            .lessons(new ArrayList<>())
+                            .build();
+
+                    List<Map<String, Object>> lessonDefs = (List<Map<String, Object>>) mDef.get("lessons");
+                    for (int li = 0; li < lessonDefs.size(); li++) {
+                        Map<String, Object> lDef = lessonDefs.get(li);
+                        module.getLessons().add(LearningPathLesson.builder()
+                                .module(module)
+                                .title((String) lDef.get("title"))
+                                .videoUrl((String) lDef.get("videoUrl"))
+                                .durationMinutes((Integer) lDef.get("durationMinutes"))
+                                .isPreview((Boolean) lDef.get("isPreview"))
+                                .orderIndex(li)
+                                .build());
+                    }
+                    saved.getModules().add(module);
+                }
+                learningPathRepository.save(saved);
+            }
+            log.info("Seeded system learning paths");
+            autoEnrollUser(prefix);
+        } catch (Exception e) {
+            log.error("Failed to seed learning paths: {}", e.getMessage());
+        }
+    }
+
+    private void autoEnrollUser(String prefix) {
+        User student = userRepository.findByEmail("user@skillsync.com").orElse(null);
+        if (student == null) return;
+
+        student.setCreditsBalance(Math.max(student.getCreditsBalance(), 1000));
+        userRepository.save(student);
+
+        List<LearningPath> paths = learningPathRepository.findAll().stream()
+                .filter(lp -> lp.getTitle().startsWith(prefix)).toList();
+
+        int count = 0;
+        for (LearningPath lp : paths) {
+            if (!learningPathEnrollmentRepository.existsByLearningPathIdAndStudentId(lp.getId(), student.getId())) {
+                int cost = lp.getTotalCredits() != null ? lp.getTotalCredits() : 0;
+                if (student.getCreditsBalance() >= cost) {
+                    student.setCreditsBalance(student.getCreditsBalance() - cost);
+                    userRepository.save(student);
+                    learningPathEnrollmentRepository.save(LearningPathEnrollment.builder()
+                            .learningPath(lp).student(student).learnerId(student.getId())
+                            .progressPercent(0).status("ENROLLED").build());
+                    count++;
                 }
             }
-            if (updated > 0) {
-                forumPostRepository.saveAll(posts);
-                log.info("✅ Backfilled {} forum posts to APPROVED", updated);
-            }
-        } catch (Exception e) {
-            log.warn("Could not backfill forum post statuses: {}", e.getMessage());
         }
+        log.info("Auto-enrolled {} paths for user@skillsync.com", count);
     }
 
-    // ─── Missions ─────────────────────────────────────────────────────────────
-    
-    private void seedMissions() {
-        if (creditMissionRepository.count() > 0) {
-            log.info("⏩ Missions already seeded");
-            return;
-        }
-
-        List<CreditMission> defaultMissions = List.of(
-            CreditMission.builder().title("Đăng nhập hằng ngày").description("Đăng nhập vào hệ thống để nhận thưởng mỗi ngày.").rewardAmount(10).missionType(MissionType.DAILY).targetAction("LOGIN").build(),
-            CreditMission.builder().title("Tham gia 1 buổi học").description("Hoàn thành ít nhất một buổi học bất kỳ trong ngày.").rewardAmount(30).missionType(MissionType.DAILY).targetAction("JOIN_SESSION").build(),
-            CreditMission.builder().title("Chia sẻ khóa học").description("Chia sẻ một khóa học lên mạng xã hội để lan tỏa kiến thức.").rewardAmount(20).missionType(MissionType.DAILY).targetAction("SHARE_COURSE").build(),
-            CreditMission.builder().title("Online 30 phút").description("Hoạt động trên hệ thống đủ 30 phút trong ngày.").rewardAmount(50).missionType(MissionType.DAILY).targetAction("ONLINE_30_MINS").build(),
-            CreditMission.builder().title("Cập nhật hồ sơ").description("Hoàn thiện thông tin cá nhân của bạn để mọi người có thể biết đến bạn nhiều hơn.").rewardAmount(50).missionType(MissionType.ONCE).targetAction("UPDATE_PROFILE").build(),
-            CreditMission.builder().title("Tham gia buổi học đầu tiên").description("Đăng ký và hoàn thành trọn vẹn một buổi học do người khác tổ chức.").rewardAmount(100).missionType(MissionType.ONCE).targetAction("FIRST_SESSION_JOINED").build(),
-            CreditMission.builder().title("Mở lớp dạy đầu tiên").description("Tạo và giảng dạy thành công một buổi học chia sẻ kỹ năng của bạn.").rewardAmount(200).missionType(MissionType.ONCE).targetAction("FIRST_SESSION_TAUGHT").build()
+    private void seedLeaderboard() {
+        Map<String, Double> topUsers = Map.of(
+            "nguyenvana@gmail.com", 150000.0,
+            "tranthib@gmail.com", 125000.0
         );
-
-        creditMissionRepository.saveAll(defaultMissions);
-        log.info("✅ Seeded {} default missions", defaultMissions.size());
+        topUsers.forEach((email, score) -> 
+            userRepository.findByEmail(email).ifPresent(u -> {
+                leaderboardService.incrementScore(u.getId().toString(), score);
+                log.info("Set leaderboard score for {}: {}", email, score);
+            })
+        );
     }
-
-
 }

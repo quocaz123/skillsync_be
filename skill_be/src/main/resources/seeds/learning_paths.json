@@ -1,0 +1,282 @@
+[
+  {
+    "title": "SYS_SEED_1 React Fundamentals",
+    "shortDescription": "React cho người mới bắt đầu",
+    "category": "TECH",
+    "level": "BEGINNER",
+    "totalCredits": 0,
+    "thumbUrl": "https://images.unsplash.com/photo-1633356122544-f134324a6cee?q=80&w=2070&auto=format&fit=crop",
+    "modules": [
+      {
+        "title": "Module 1 - Intro React",
+        "enableSupport": false,
+        "hasQuiz": false,
+        "lessons": [
+          { "title": "Bài 1 - Setup project", "videoUrl": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "durationMinutes": 10, "isPreview": true },
+          { "title": "Bài 2 - Components cơ bản", "videoUrl": "https://www.youtube.com/watch?v=3JZ_D3ELwOQ", "durationMinutes": 12, "isPreview": true }
+        ]
+      },
+      {
+        "title": "Module 2 - State & Props",
+        "enableSupport": true,
+        "hasQuiz": false,
+        "lessons": [
+          { "title": "Bài 1 - Props", "videoUrl": "https://www.youtube.com/watch?v=0KSOMA3QBU", "durationMinutes": 11, "isPreview": false },
+          { "title": "Bài 2 - State", "videoUrl": "https://www.youtube.com/watch?v=tAGnKpE4NCI", "durationMinutes": 14, "isPreview": false }
+        ]
+      }
+    ]
+  },
+  {
+    "title": "SYS_SEED_2 JavaScript cho người đi làm",
+    "shortDescription": "Nắm vững JavaScript thực chiến",
+    "category": "TECH",
+    "level": "INTERMEDIATE",
+    "totalCredits": 20,
+    "thumbUrl": "https://images.unsplash.com/photo-1579468118864-1b9ea3c0db4a?q=80&w=2070&auto=format&fit=crop",
+    "modules": [
+      {
+        "title": "Module 1 - ES Modules",
+        "enableSupport": false,
+        "hasQuiz": false,
+        "lessons": [
+          { "title": "Bài 1 - Import/Export", "videoUrl": "https://www.youtube.com/watch?v=YQHsXMglC9A", "durationMinutes": 10, "isPreview": true },
+          { "title": "Bài 2 - Async/Await", "videoUrl": "https://www.youtube.com/watch?v=2Z4G-8vKkYI", "durationMinutes": 15, "isPreview": true }
+        ]
+      },
+      {
+        "title": "Module 2 - Patterns",
+        "enableSupport": true,
+        "hasQuiz": false,
+        "lessons": [
+          { "title": "Bài 1 - Closures", "videoUrl": "https://www.youtube.com/watch?v=aqz-KE-bpKQ", "durationMinutes": 12, "isPreview": false },
+          { "title": "Bài 2 - Design patterns", "videoUrl": "https://www.youtube.com/watch?v=J---aiyznGQ", "durationMinutes": 16, "isPreview": false }
+        ]
+      }
+    ]
+  },
+  {
+    "title": "SYS_SEED_3 SQL từ con số 0",
+    "shortDescription": "SQL nền tảng để phân tích dữ liệu",
+    "category": "TECH",
+    "level": "BEGINNER",
+    "totalCredits": 0,
+    "thumbUrl": "https://images.unsplash.com/photo-1544383835-bda2bc66a55d?q=80&w=2070&auto=format&fit=crop",
+    "modules": [
+      {
+        "title": "Module 1 - SELECT & JOIN",
+        "enableSupport": false,
+        "hasQuiz": false,
+        "lessons": [
+          { "title": "Bài 1 - SELECT", "videoUrl": "https://www.youtube.com/watch?v=HXV3zeQKqUE", "durationMinutes": 10, "isPreview": true },
+          { "title": "Bài 2 - JOIN", "videoUrl": "https://www.youtube.com/watch?v=9InZQeQ6Qk8", "durationMinutes": 12, "isPreview": true }
+        ]
+      },
+      {
+        "title": "Module 2 - Aggregation",
+        "enableSupport": false,
+        "hasQuiz": true,
+        "lessons": [
+          { "title": "Bài 1 - GROUP BY", "videoUrl": "https://www.youtube.com/watch?v=RiOv1vG2K2s", "durationMinutes": 11, "isPreview": false },
+          { "title": "Bài 2 - Window functions", "videoUrl": "https://www.youtube.com/watch?v=GNq9v8n9b5k", "durationMinutes": 14, "isPreview": false }
+        ]
+      }
+    ]
+  },
+  {
+    "title": "SYS_SEED_4 UI/UX cơ bản với Figma",
+    "shortDescription": "Từ wireframe đến prototype",
+    "category": "DESIGN",
+    "level": "BEGINNER",
+    "totalCredits": 0,
+    "thumbUrl": "https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?q=80&w=1974&auto=format&fit=crop",
+    "modules": [
+      {
+        "title": "Module 1 - Figma basics",
+        "enableSupport": false,
+        "hasQuiz": false,
+        "lessons": [
+          { "title": "Bài 1 - Frames", "videoUrl": "https://www.youtube.com/watch?v=ysz5S6PUM-U", "durationMinutes": 10, "isPreview": true },
+          { "title": "Bài 2 - Components", "videoUrl": "https://www.youtube.com/watch?v=aqz-KE-bpKQ", "durationMinutes": 12, "isPreview": true }
+        ]
+      },
+      {
+        "title": "Module 2 - Prototype",
+        "enableSupport": true,
+        "hasQuiz": false,
+        "lessons": [
+          { "title": "Bài 1 - Auto layout", "videoUrl": "https://www.youtube.com/watch?v=9n3eaGFDqQ0", "durationMinutes": 11, "isPreview": false },
+          { "title": "Bài 2 - Handoff", "videoUrl": "https://www.youtube.com/watch?v=G3p9eG3Q4mI", "durationMinutes": 14, "isPreview": false }
+        ]
+      }
+    ]
+  },
+  {
+    "title": "SYS_SEED_5 Machine Learning nền tảng",
+    "shortDescription": "Tư duy ML và mô hình cơ bản",
+    "category": "DATA",
+    "level": "INTERMEDIATE",
+    "totalCredits": 30,
+    "thumbUrl": "https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?q=80&w=2070&auto=format&fit=crop",
+    "modules": [
+      {
+        "title": "Module 1 - Supervised learning",
+        "enableSupport": true,
+        "hasQuiz": true,
+        "lessons": [
+          { "title": "Bài 1 - Regression", "videoUrl": "https://www.youtube.com/watch?v=GmXwQx9G6fA", "durationMinutes": 10, "isPreview": true },
+          { "title": "Bài 2 - Classification", "videoUrl": "https://www.youtube.com/watch?v=aircAruvnKk", "durationMinutes": 15, "isPreview": true }
+        ]
+      },
+      {
+        "title": "Module 2 - Evaluation",
+        "enableSupport": true,
+        "hasQuiz": false,
+        "lessons": [
+          { "title": "Bài 1 - Metrics", "videoUrl": "https://www.youtube.com/watch?v=3cX5F5X0k8k", "durationMinutes": 12, "isPreview": false },
+          { "title": "Bài 2 - Cross-validation", "videoUrl": "https://www.youtube.com/watch?v=VbfpW5p2d9o", "durationMinutes": 16, "isPreview": false }
+        ]
+      }
+    ]
+  },
+  {
+    "title": "SYS_SEED_6 English for work",
+    "shortDescription": "Giao tiếp tiếng Anh trong môi trường công việc",
+    "category": "LANGUAGE",
+    "level": "INTERMEDIATE",
+    "totalCredits": 25,
+    "thumbUrl": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=2070&auto=format&fit=crop",
+    "modules": [
+      {
+        "title": "Module 1 - Email & meetings",
+        "enableSupport": false,
+        "hasQuiz": false,
+        "lessons": [
+          { "title": "Bài 1 - Email templates", "videoUrl": "https://www.youtube.com/watch?v=kJQP7kiw5Fk", "durationMinutes": 10, "isPreview": true },
+          { "title": "Bài 2 - Meeting phrases", "videoUrl": "https://www.youtube.com/watch?v=ScMzIvxBSi4", "durationMinutes": 15, "isPreview": true }
+        ]
+      },
+      {
+        "title": "Module 2 - Presentations",
+        "enableSupport": true,
+        "hasQuiz": true,
+        "lessons": [
+          { "title": "Bài 1 - Structure slides", "videoUrl": "https://www.youtube.com/watch?v=2Vv-BfVoq4g", "durationMinutes": 12, "isPreview": false },
+          { "title": "Bài 2 - Q&A handling", "videoUrl": "https://www.youtube.com/watch?v=hTWtf2vVfZs", "durationMinutes": 16, "isPreview": false }
+        ]
+      }
+    ]
+  },
+  {
+    "title": "SYS_SEED_7 Giao tiếp & thuyết trình",
+    "shortDescription": "Kỹ năng mềm để tự tin hơn",
+    "category": "SOFT_SKILL",
+    "level": "BEGINNER",
+    "totalCredits": 0,
+    "thumbUrl": "https://images.unsplash.com/photo-1557804506-669a67965ba0?q=80&w=1974&auto=format&fit=crop",
+    "modules": [
+      {
+        "title": "Module 1 - Body language",
+        "enableSupport": false,
+        "hasQuiz": false,
+        "lessons": [
+          { "title": "Bài 1 - Eye contact", "videoUrl": "https://www.youtube.com/watch?v=0hR2eZk6FqQ", "durationMinutes": 10, "isPreview": true },
+          { "title": "Bài 2 - Voice control", "videoUrl": "https://www.youtube.com/watch?v=CZgkq3p0vW4", "durationMinutes": 12, "isPreview": true }
+        ]
+      },
+      {
+        "title": "Module 2 - Storytelling",
+        "enableSupport": true,
+        "hasQuiz": false,
+        "lessons": [
+          { "title": "Bài 1 - Open with hook", "videoUrl": "https://www.youtube.com/watch?v=E7wJTI-1dvQ", "durationMinutes": 11, "isPreview": false },
+          { "title": "Bài 2 - Closing strong", "videoUrl": "https://www.youtube.com/watch?v=fLexgOxsZu0", "durationMinutes": 14, "isPreview": false }
+        ]
+      }
+    ]
+  },
+  {
+    "title": "SYS_SEED_8 Business Analysis essentials",
+    "shortDescription": "Phân tích yêu cầu và dữ liệu",
+    "category": "BUSINESS",
+    "level": "INTERMEDIATE",
+    "totalCredits": 35,
+    "thumbUrl": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=2015&auto=format&fit=crop",
+    "modules": [
+      {
+        "title": "Module 1 - Requirements",
+        "enableSupport": true,
+        "hasQuiz": false,
+        "lessons": [
+          { "title": "Bài 1 - User stories", "videoUrl": "https://www.youtube.com/watch?v=uel1gA4zqG8", "durationMinutes": 10, "isPreview": true },
+          { "title": "Bài 2 - Acceptance criteria", "videoUrl": "https://www.youtube.com/watch?v=7NOSDKb8w5M", "durationMinutes": 15, "isPreview": true }
+        ]
+      },
+      {
+        "title": "Module 2 - Data reasoning",
+        "enableSupport": true,
+        "hasQuiz": true,
+        "lessons": [
+          { "title": "Bài 1 - Hypothesis", "videoUrl": "https://www.youtube.com/watch?v=F2g5j7JYf7I", "durationMinutes": 12, "isPreview": false },
+          { "title": "Bài 2 - Decision making", "videoUrl": "https://www.youtube.com/watch?v=Zi_XLOBBiJY", "durationMinutes": 16, "isPreview": false }
+        ]
+      }
+    ]
+  },
+  {
+    "title": "SYS_SEED_9 Career & portfolio",
+    "shortDescription": "Xây portfolio để ứng tuyển hiệu quả",
+    "category": "CAREER",
+    "level": "BEGINNER",
+    "totalCredits": 0,
+    "thumbUrl": "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?q=80&w=1955&auto=format&fit=crop",
+    "modules": [
+      {
+        "title": "Module 1 - Portfolio basics",
+        "enableSupport": false,
+        "hasQuiz": false,
+        "lessons": [
+          { "title": "Bài 1 - Project selection", "videoUrl": "https://www.youtube.com/watch?v=Z9T1o0cFv0Y", "durationMinutes": 10, "isPreview": true },
+          { "title": "Bài 2 - Writing README", "videoUrl": "https://www.youtube.com/watch?v=O6p86uwd7pI", "durationMinutes": 12, "isPreview": true }
+        ]
+      },
+      {
+        "title": "Module 2 - Demo & interview",
+        "enableSupport": true,
+        "hasQuiz": false,
+        "lessons": [
+          { "title": "Bài 1 - Elevator pitch", "videoUrl": "https://www.youtube.com/watch?v=Zi_XLOBBiJY", "durationMinutes": 11, "isPreview": false },
+          { "title": "Bài 2 - Mock interview", "videoUrl": "https://www.youtube.com/watch?v=uel1gA4zqG8", "durationMinutes": 14, "isPreview": false }
+        ]
+      }
+    ]
+  },
+  {
+    "title": "SYS_SEED_10 Advanced React patterns",
+    "shortDescription": "Tối ưu và nâng cấp kiến trúc",
+    "category": "TECH",
+    "level": "ADVANCED",
+    "totalCredits": 40,
+    "thumbUrl": "https://images.unsplash.com/photo-1587620962725-abab7fe55159?q=80&w=1931&auto=format&fit=crop",
+    "modules": [
+      {
+        "title": "Module 1 - Performance",
+        "enableSupport": true,
+        "hasQuiz": true,
+        "lessons": [
+          { "title": "Bài 1 - Memoization", "videoUrl": "https://www.youtube.com/watch?v=1Leq2GJkJgE", "durationMinutes": 10, "isPreview": true },
+          { "title": "Bài 2 - Rendering strategy", "videoUrl": "https://www.youtube.com/watch?v=Y2hVQm5b1z8", "durationMinutes": 15, "isPreview": true }
+        ]
+      },
+      {
+        "title": "Module 2 - Architecture",
+        "enableSupport": true,
+        "hasQuiz": false,
+        "lessons": [
+          { "title": "Bài 1 - Feature folders", "videoUrl": "https://www.youtube.com/watch?v=J---aiyznGQ", "durationMinutes": 12, "isPreview": false },
+          { "title": "Bài 2 - Testing approach", "videoUrl": "https://www.youtube.com/watch?v=aqz-KE-bpKQ", "durationMinutes": 16, "isPreview": false }
+        ]
+      }
+    ]
+  }
+]

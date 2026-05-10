@@ -66,7 +66,7 @@ public class SecurityConfiguration {
                         .requestMatchers("/auth/logout").permitAll()
                         .requestMatchers("/ws/**").permitAll()
                         // Learning paths public
-                        .requestMatchers("/api/learning-paths/approved").permitAll()
+                        .requestMatchers("/api/learning-paths/approved", "/api/leaderboard").permitAll()
                         .requestMatchers("/api/learning-paths/*/approve", "/api/learning-paths/*/reject").hasRole("ADMIN")
                         .requestMatchers("/auth/**").authenticated()
                         // Admin only

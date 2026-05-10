@@ -50,6 +50,7 @@ public class SessionService {
     private final NotificationEventPublisher notificationEventPublisher;
     private final SessionReportRepository sessionReportRepository;
     private final UserMissionService userMissionService;
+    private final LeaderboardService leaderboardService;
 
     // ── Book (Request) ──────────────────────────────────────
     @Transactional
@@ -650,6 +651,9 @@ public class SessionService {
                 .description("Earned from session " + session.getVideoRoomId())
                 .build();
         transactionRepository.save(tx);
+
+        // Leaderboard: Mentor nhận 1 điểm cho mỗi credit kiếm được
+        leaderboardService.incrementScore(teacher.getId().toString(), (double) session.getCreditCost());
 
         notificationService.createAndSend(NotificationCreateRequest.builder()
                 .userId(teacher.getId())

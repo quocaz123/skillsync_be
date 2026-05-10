@@ -49,6 +49,7 @@ public class LearningPathService {
     private final CreditTransactionRepository creditTransactionRepository;
     private final UserRepository userRepository;
     private final UserService userService;
+    private final LeaderboardService leaderboardService;
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -261,7 +262,13 @@ public class LearningPathService {
                         .description("Nhận credits từ đăng ký lộ trình: " + lp.getTitle())
                         .build();
                 creditTransactionRepository.save(earnTx);
+
+                // Leaderboard: Mentor nhận 1 điểm cho mỗi credit kiếm được
+                leaderboardService.incrementScore(teacher.getId().toString(), (double) cost);
             }
+
+            // Leaderboard: Học viên nhận 0.5 điểm cho mỗi credit chi tiêu
+            leaderboardService.incrementScore(student.getId().toString(), cost * 0.5);
         }
 
         LearningPathEnrollment enrollment = LearningPathEnrollment.builder()
@@ -319,12 +326,19 @@ public class LearningPathService {
         }
     }
 
-    /** POST review */
+    /** POST review — chỉ user đã enroll mới đánh giá được, mỗi user chỉ 1 lần */
     @Transactional
     public LearningPathReviewResponse addReview(UUID learningPathId, LearningPathReviewRequest req) {
         User reviewer = userService.getCurrentUser();
         LearningPath lp = learningPathRepository.findById(learningPathId)
                 .orElseThrow(() -> new AppException(ErrorCode.NOT_FOUND, "Lộ trình không tồn tại"));
+
+        // Chỉ user đã đăng ký mới được đánh giá
+        boolean enrolled = learningPathEnrollmentRepository
+                .existsByLearningPathIdAndStudentId(lp.getId(), reviewer.getId());
+        if (!enrolled) {
+            throw new AppException(ErrorCode.FORBIDDEN, "Bạn phải đăng ký khóa học trước khi đánh giá");
+        }
 
         if (learningPathReviewRepository.existsByLearningPathIdAndReviewerId(lp.getId(), reviewer.getId())) {
             throw new AppException(ErrorCode.LEARNING_PATH_ALREADY_RATED, "Bạn đã đánh giá lộ trình này rồi");
@@ -340,11 +354,13 @@ public class LearningPathService {
 
         learningPathReviewRepository.save(review);
 
-        // Update aggregate rating
-        int newTotalReviews = lp.getTotalReviews() + 1;
-        double newRating = ((lp.getRating() * lp.getTotalReviews()) + req.getRating()) / newTotalReviews;
+        // Update aggregate rating — fix NPE khi rating = null lần đầu
+        double currentRating = lp.getRating() != null ? lp.getRating() : 0.0;
+        int currentTotal = lp.getTotalReviews() != null ? lp.getTotalReviews() : 0;
+        int newTotalReviews = currentTotal + 1;
+        double newRating = ((currentRating * currentTotal) + req.getRating()) / newTotalReviews;
         lp.setTotalReviews(newTotalReviews);
-        lp.setRating(newRating);
+        lp.setRating(Math.round(newRating * 10.0) / 10.0); // round 1 decimal
         learningPathRepository.save(lp);
 
         return LearningPathReviewResponse.builder()
@@ -358,6 +374,31 @@ public class LearningPathService {
                 .tags(req.getTags())
                 .createdAt(review.getCreatedAt())
                 .build();
+    }
+
+    /** GET reviews của một learning path */
+    @Transactional(readOnly = true)
+    public List<LearningPathReviewResponse> getReviews(UUID learningPathId) {
+        return learningPathReviewRepository.findByLearningPathId(learningPathId).stream()
+                .map(r -> LearningPathReviewResponse.builder()
+                        .id(r.getId())
+                        .learningPathId(r.getLearningPathId())
+                        .reviewerId(r.getReviewerId())
+                        .reviewerName(r.getReviewer() != null ? r.getReviewer().getFullName() : "Người dùng")
+                        .reviewerAvatarUrl(r.getReviewer() != null ? r.getReviewer().getAvatarUrl() : null)
+                        .rating(r.getRating())
+                        .comment(r.getComment())
+                        .tags(r.getTags() != null ? List.of(r.getTags().split(",")) : List.of())
+                        .createdAt(r.getCreatedAt())
+                        .build())
+                .toList();
+    }
+
+    /** Check current user đã review chưa (cho FE ẩn nút) */
+    @Transactional(readOnly = true)
+    public boolean hasCurrentUserReviewed(UUID learningPathId) {
+        User user = userService.getCurrentUser();
+        return learningPathReviewRepository.existsByLearningPathIdAndReviewerId(learningPathId, user.getId());
     }
 
     // ─── Mappers ────────────────────────────────────────────
