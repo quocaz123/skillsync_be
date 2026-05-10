@@ -25,7 +25,25 @@ public interface UserRepository extends JpaRepository<User, UUID> {
            "ORDER BY u.fullName ASC")
     List<User> searchForMention(@Param("q") String q, Pageable pageable);
 
-    @Query("SELECT u FROM User u WHERE " +
-           "(:search IS NULL OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')))")
+    /**
+     * Lấy tất cả user (dành cho admin) — không lọc search.
+     * Tách khỏi query có LOWER() để tránh lỗi PostgreSQL lower(bytea).
+     */
+    @Query("SELECT u FROM User u ORDER BY u.createdAt DESC")
+    org.springframework.data.domain.Page<User> findAllForAdmin(Pageable pageable);
+
+    /**
+     * Tìm kiếm user theo tên hoặc email (dành cho admin).
+     * Dùng native SQL với cast ::text rõ ràng để tránh lỗi lower(bytea).
+     */
+    @Query(value = "SELECT * FROM users u WHERE " +
+                   "lower(u.full_name::text) LIKE lower(('%' || :search || '%')) OR " +
+                   "lower(u.email::text) LIKE lower(('%' || :search || '%')) " +
+                   "ORDER BY u.created_at DESC",
+           countQuery = "SELECT count(*) FROM users u WHERE " +
+                        "lower(u.full_name::text) LIKE lower(('%' || :search || '%')) OR " +
+                        "lower(u.email::text) LIKE lower(('%' || :search || '%'))",
+           nativeQuery = true)
     org.springframework.data.domain.Page<User> searchAllForAdmin(@Param("search") String search, Pageable pageable);
 }
+

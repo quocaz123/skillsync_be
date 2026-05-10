@@ -197,10 +197,14 @@ public class UserService {
     public com.skillsync.skillsync.dto.common.PageResponse<com.skillsync.skillsync.dto.response.admin.AdminUserResponse> getAllUsersForAdmin(
             String search, int page, int size) {
         String searchQuery = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
-        org.springframework.data.domain.Page<User> usersPage = userRepository.searchAllForAdmin(
-                searchQuery,
-                org.springframework.data.domain.PageRequest.of(page, size,
-                        org.springframework.data.domain.Sort.by("createdAt").descending()));
+        org.springframework.data.domain.PageRequest pageRequest = org.springframework.data.domain.PageRequest.of(
+                page, size, org.springframework.data.domain.Sort.by("createdAt").descending());
+
+        // Tách 2 query: khi không có search dùng findAllForAdmin để tránh lỗi lower(bytea)
+        org.springframework.data.domain.Page<User> usersPage = (searchQuery == null)
+                ? userRepository.findAllForAdmin(pageRequest)
+                : userRepository.searchAllForAdmin(searchQuery, pageRequest);
+
 
         org.springframework.data.domain.Page<com.skillsync.skillsync.dto.response.admin.AdminUserResponse> dtoPage = usersPage
                 .map(u -> com.skillsync.skillsync.dto.response.admin.AdminUserResponse.builder()

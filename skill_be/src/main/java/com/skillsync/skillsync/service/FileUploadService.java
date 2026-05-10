@@ -93,6 +93,10 @@ public class FileUploadService {
                 if (!imageTypes.contains(contentType))
                     throw new AppException(ErrorCode.INVALID_REQUEST, "Avatar chỉ hỗ trợ JPG, PNG, WEBP");
             }
+            case LEARNING_PATH_THUMBNAIL -> {
+                if (!imageTypes.contains(contentType))
+                    throw new AppException(ErrorCode.INVALID_REQUEST, "Thumbnail chỉ hỗ trợ JPG, PNG, WEBP");
+            }
             case TEACHING_EVIDENCE, SESSION_ATTACHMENT, REPORT_EVIDENCE -> {
                 if (!mixedTypes.contains(contentType))
                     throw new AppException(ErrorCode.INVALID_REQUEST, "Loại file không được hỗ trợ");
@@ -106,6 +110,7 @@ public class FileUploadService {
             case TEACHING_EVIDENCE -> "teaching-evidences";
             case SESSION_ATTACHMENT -> "session-attachments";
             case REPORT_EVIDENCE -> "report-evidences";
+            case LEARNING_PATH_THUMBNAIL -> "learning-path-thumbnails";
         };
     }
 
