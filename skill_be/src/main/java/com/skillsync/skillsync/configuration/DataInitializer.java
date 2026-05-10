@@ -269,7 +269,7 @@ public class DataInitializer implements CommandLineRunner {
         );
         topUsers.forEach((email, score) -> 
             userRepository.findByEmail(email).ifPresent(u -> {
-                leaderboardService.incrementScore(u.getId().toString(), score);
+                leaderboardService.setScore(u.getId().toString(), score);
                 log.info("Set leaderboard score for {}: {}", email, score);
             })
         );

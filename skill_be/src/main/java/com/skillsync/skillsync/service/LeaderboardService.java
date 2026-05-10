@@ -34,6 +34,25 @@ public class LeaderboardService {
     }
 
     /**
+     * Ghi đè điểm cống hiến (Dùng cho seeding hoặc reset).
+     */
+    public void setScore(String userId, double score) {
+        try {
+            redisTemplate.opsForZSet().add(LEADERBOARD_KEY, userId, score);
+        } catch (Exception e) {
+            log.error("Lỗi khi set điểm leaderboard cho user {}: {}", userId, e.getMessage());
+        }
+    }
+
+    /**
+     * Xóa toàn bộ bảng xếp hạng (Dùng cho reset tháng).
+     */
+    public void clearLeaderboard() {
+        redisTemplate.delete(LEADERBOARD_KEY);
+        log.info("🧹 Leaderboard has been reset for the new month.");
+    }
+
+    /**
      * Lấy danh sách bảng xếp hạng từ Redis.
      */
     public List<LeaderboardResponse> getTopUsers(int limit) {
